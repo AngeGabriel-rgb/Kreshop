@@ -1,0 +1,321 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+
+// Table des utilisateurs
+model Utilisateur {
+  id                String   @id @default(cuid()) @db.Uuid
+  email             String   @unique
+  mot_de_passe_hash String   @map("password_hash")
+  prenom            String   @map("first_name")
+  nom               String   @map("last_name")
+  telephone         String?
+  role              RoleUtilisateur @default(CLIENT)
+  est_actif         Boolean  @default(true) @map("is_active")
+  date_creation     DateTime @default(now()) @map("created_at")
+  date_modification DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  commandes         Commande[]
+  adresses          Adresse[]
+  avis_clients      AvisClient[]
+  liste_souhaits    ListeSouhaits[]
+  panier            Panier[]
+
+  @@map("users")
+}
+
+// Table des catégories
+model Categorie {
+  id            String   @id @default(cuid()) @db.Uuid
+  nom           String
+  slug          String   @unique
+  description   String?
+  parent_id     String?  @db.Uuid
+  url_image     String?  @map("image_url")
+  est_active    Boolean  @default(true) @map("is_active")
+  ordre_tri     Int      @default(0) @map("sort_order")
+  date_creation DateTime @default(now()) @map("created_at")
+
+  // Relations
+  parent        Categorie?  @relation("CategorieParent", fields: [parent_id], references: [id])
+  sous_categories Categorie[] @relation("CategorieParent")
+  produits      Produit[]
+
+  @@map("categories")
+}
+
+// Table des produits
+model Produit {
+  id                    String   @id @default(cuid()) @db.Uuid
+  nom                   String
+  slug                  String   @unique
+  description           String?
+  description_courte    String?  @map("short_description")
+  prix_fcfa             Decimal  @map("price_fcfa") @db.Decimal(10, 2)
+  prix_comparaison_fcfa Decimal? @map("compare_price_fcfa") @db.Decimal(10, 2)
+  prix_cout_fcfa        Decimal? @map("cost_price_fcfa") @db.Decimal(10, 2)
+  sku                   String?  @unique
+  code_barre            String?  @map("barcode")
+  categorie_id          String   @db.Uuid
+  marque                String?
+  poids                 Decimal? @db.Decimal(8, 3)
+  dimensions            Json?    @db.JsonB
+  est_actif             Boolean  @default(true) @map("is_active")
+  est_vedette           Boolean  @default(false) @map("is_featured")
+  titre_seo             String?  @map("seo_title")
+  description_seo       String?  @map("seo_description")
+  date_creation         DateTime @default(now()) @map("created_at")
+  date_modification     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  categorie             Categorie @relation(fields: [categorie_id], references: [id])
+  variantes             VarianteProduit[]
+  images                ImageProduit[]
+  articles_commande     ArticleCommande[]
+  avis_clients          AvisClient[]
+  liste_souhaits        ListeSouhaits[]
+  panier                Panier[]
+
+  @@map("products")
+}
+
+// Table des variantes de produits
+model VarianteProduit {
+  id                    String   @id @default(cuid()) @db.Uuid
+  produit_id            String   @db.Uuid
+  nom                   String
+  sku                   String?  @unique
+  prix_fcfa             Decimal? @map("price_fcfa") @db.Decimal(10, 2)
+  prix_comparaison_fcfa Decimal? @map("compare_price_fcfa") @db.Decimal(10, 2)
+  taille                String?
+  couleur               String?
+  quantite_stock        Int      @default(0) @map("stock_quantity")
+  seuil_stock_bas       Int      @default(5) @map("low_stock_threshold")
+  est_active            Boolean  @default(true) @map("is_active")
+  date_creation         DateTime @default(now()) @map("created_at")
+
+  // Relations
+  produit               Produit @relation(fields: [produit_id], references: [id], onDelete: Cascade)
+  images                ImageProduit[]
+  articles_commande     ArticleCommande[]
+  panier                Panier[]
+
+  @@map("product_variants")
+}
+
+// Table des images de produits
+model ImageProduit {
+  id                    String  @id @default(cuid()) @db.Uuid
+  produit_id            String  @db.Uuid
+  variante_id           String? @db.Uuid
+  url_image             String  @map("image_url")
+  texte_alternatif      String? @map("alt_text")
+  ordre_tri             Int     @default(0) @map("sort_order")
+  est_principale        Boolean @default(false) @map("is_primary")
+  cloudinary_public_id  String? @map("cloudinary_public_id")
+
+  // Relations
+  produit               Produit @relation(fields: [produit_id], references: [id], onDelete: Cascade)
+  variante              VarianteProduit? @relation(fields: [variante_id], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+// Table des commandes
+model Commande {
+  id                   String   @id @default(cuid()) @db.Uuid
+  numero_commande      String   @unique @map("order_number")
+  utilisateur_id       String   @db.Uuid
+  statut               StatutCommande @default(EN_ATTENTE)
+  statut_paiement      StatutPaiement @default(EN_ATTENTE) @map("payment_status")
+  sous_total_fcfa      Decimal  @map("subtotal_fcfa") @db.Decimal(10, 2)
+  taxes_fcfa           Decimal  @default(0) @map("tax_fcfa") @db.Decimal(10, 2)
+  livraison_fcfa       Decimal  @default(0) @map("shipping_fcfa") @db.Decimal(10, 2)
+  remise_fcfa          Decimal  @default(0) @map("discount_fcfa") @db.Decimal(10, 2)
+  total_fcfa           Decimal  @map("total_fcfa") @db.Decimal(10, 2)
+  devise               String   @default("XAF")
+  methode_paiement     String?  @map("payment_method")
+  reference_paiement   String?  @map("payment_reference")
+  adresse_livraison    Json?    @map("shipping_address") @db.JsonB
+  adresse_facturation  Json?    @map("billing_address") @db.JsonB
+  notes                String?
+  date_creation        DateTime @default(now()) @map("created_at")
+  date_modification    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  utilisateur          Utilisateur @relation(fields: [utilisateur_id], references: [id])
+  articles             ArticleCommande[]
+
+  @@map("orders")
+}
+
+// Table des articles de commande
+model ArticleCommande {
+  id                   String  @id @default(cuid()) @db.Uuid
+  commande_id          String  @db.Uuid
+  produit_id           String  @db.Uuid
+  variante_id          String? @db.Uuid
+  quantite             Int
+  prix_fcfa            Decimal @map("price_fcfa") @db.Decimal(10, 2)
+  total_fcfa           Decimal @map("total_fcfa") @db.Decimal(10, 2)
+  instantane_produit   Json?   @map("product_snapshot") @db.JsonB
+
+  // Relations
+  commande             Commande @relation(fields: [commande_id], references: [id], onDelete: Cascade)
+  produit              Produit @relation(fields: [produit_id], references: [id])
+  variante             VarianteProduit? @relation(fields: [variante_id], references: [id])
+
+  @@map("order_items")
+}
+
+// Table des adresses
+model Adresse {
+  id                String      @id @default(cuid()) @db.Uuid
+  utilisateur_id    String      @db.Uuid
+  type              TypeAdresse
+  prenom            String      @map("first_name")
+  nom               String      @map("last_name")
+  entreprise        String?
+  ligne_adresse_1   String      @map("address_line_1")
+  ligne_adresse_2   String?     @map("address_line_2")
+  ville             String      @default("Libreville")
+  quartier          String?
+  code_postal       String?     @map("postal_code")
+  pays              String      @default("Gabon")
+  telephone         String?
+  est_defaut        Boolean     @default(false) @map("is_default")
+  date_creation     DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  utilisateur       Utilisateur @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@map("addresses")
+}
+
+// Table des codes promotionnels
+model CodePromotionnel {
+  id                     String   @id @default(cuid()) @db.Uuid
+  code                   String   @unique
+  description            String?
+  type_remise            TypeRemise @map("discount_type")
+  valeur_remise          Decimal  @map("discount_value") @db.Decimal(10, 2)
+  commande_minimum_fcfa  Decimal? @map("minimum_order_fcfa") @db.Decimal(10, 2)
+  limite_utilisation     Int?     @map("usage_limit")
+  compteur_utilisation   Int      @default(0) @map("usage_count")
+  est_actif              Boolean  @default(true) @map("is_active")
+  debut_validite         DateTime? @map("starts_at")
+  fin_validite           DateTime? @map("expires_at")
+  date_creation          DateTime @default(now()) @map("created_at")
+
+  @@map("coupons")
+}
+
+// Table des avis clients
+model AvisClient {
+  id                String      @id @default(cuid()) @db.Uuid
+  produit_id        String      @db.Uuid
+  utilisateur_id    String      @db.Uuid
+  commande_id       String?     @db.Uuid
+  note              Int         // 1-5
+  titre             String?
+  commentaire       String?
+  est_verifie       Boolean     @default(false) @map("is_verified")
+  est_publie        Boolean     @default(false) @map("is_published")
+  date_creation     DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  produit           Produit     @relation(fields: [produit_id], references: [id], onDelete: Cascade)
+  utilisateur       Utilisateur @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+// Table des listes de souhaits
+model ListeSouhaits {
+  id                String      @id @default(cuid()) @db.Uuid
+  utilisateur_id    String      @db.Uuid
+  produit_id        String      @db.Uuid
+  date_creation     DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  utilisateur       Utilisateur @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+  produit           Produit     @relation(fields: [produit_id], references: [id], onDelete: Cascade)
+
+  @@unique([utilisateur_id, produit_id])
+  @@map("wishlists")
+}
+
+// Table du panier
+model Panier {
+  id                String           @id @default(cuid()) @db.Uuid
+  utilisateur_id    String?          @db.Uuid
+  session_id        String?          @map("session_id")
+  produit_id        String           @db.Uuid
+  variante_id       String?          @db.Uuid
+  quantite          Int
+  date_creation     DateTime         @default(now()) @map("created_at")
+  date_modification DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  utilisateur       Utilisateur?     @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+  produit           Produit          @relation(fields: [produit_id], references: [id], onDelete: Cascade)
+  variante          VarianteProduit? @relation(fields: [variante_id], references: [id], onDelete: Cascade)
+
+  @@map("shopping_cart")
+}
+
+// Énumérations (Enums)
+enum RoleUtilisateur {
+  CLIENT     @map("customer")
+  ADMIN      @map("admin")
+
+  @@map("user_role")
+}
+
+enum StatutCommande {
+  EN_ATTENTE @map("pending")
+  CONFIRMEE  @map("confirmed")
+  TRAITEE    @map("processing")
+  EXPEDIEE   @map("shipped")
+  LIVREE     @map("delivered")
+  ANNULEE    @map("cancelled")
+
+  @@map("order_status")
+}
+
+enum StatutPaiement {
+  EN_ATTENTE @map("pending")
+  PAYE       @map("paid")
+  ECHEC      @map("failed")
+  REMBOURSE  @map("refunded")
+
+  @@map("payment_status")
+}
+
+enum TypeAdresse {
+  LIVRAISON    @map("shipping")
+  FACTURATION  @map("billing")
+
+  @@map("address_type")
+}
+
+enum TypeRemise {
+  POURCENTAGE     @map("percentage")
+  MONTANT_FIXE    @map("fixed_amount")
+
+  @@map("discount_type")
+}
