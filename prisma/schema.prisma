@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,16 +8,29 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-
-// Table des utilisateurs
-model Utilisateur {
-  id                String   @id @default(cuid()) @db.Uuid
+// Table des administrateurs
+model Admin {
+  id                Int      @id @default(autoincrement())
   email             String   @unique
   mot_de_passe_hash String   @map("password_hash")
   prenom            String   @map("first_name")
   nom               String   @map("last_name")
   telephone         String?
-  role              RoleUtilisateur @default(CLIENT)
+  est_actif         Boolean  @default(true) @map("is_active")
+  date_creation     DateTime @default(now()) @map("created_at")
+  date_modification DateTime @updatedAt @map("updated_at")
+
+  @@map("admins")
+}
+
+// Table des clients
+model Client {
+  id                Int      @id @default(autoincrement())
+  email             String   @unique
+  mot_de_passe_hash String   @map("password_hash")
+  prenom            String   @map("first_name")
+  nom               String   @map("last_name")
+  telephone         String?
   est_actif         Boolean  @default(true) @map("is_active")
   date_creation     DateTime @default(now()) @map("created_at")
   date_modification DateTime @updatedAt @map("updated_at")
@@ -35,16 +42,16 @@ model Utilisateur {
   liste_souhaits    ListeSouhaits[]
   panier            Panier[]
 
-  @@map("users")
+  @@map("clients")
 }
 
 // Table des catégories
 model Categorie {
-  id            String   @id @default(cuid()) @db.Uuid
+  id            Int      @id @default(autoincrement())
   nom           String
   slug          String   @unique
   description   String?
-  parent_id     String?  @db.Uuid
+  parent_id     Int?
   url_image     String?  @map("image_url")
   est_active    Boolean  @default(true) @map("is_active")
   ordre_tri     Int      @default(0) @map("sort_order")
@@ -60,17 +67,17 @@ model Categorie {
 
 // Table des produits
 model Produit {
-  id                    String   @id @default(cuid()) @db.Uuid
+  id                    Int      @id @default(autoincrement())
   nom                   String
   slug                  String   @unique
   description           String?
   description_courte    String?  @map("short_description")
   prix_fcfa             Decimal  @map("price_fcfa") @db.Decimal(10, 2)
   prix_comparaison_fcfa Decimal? @map("compare_price_fcfa") @db.Decimal(10, 2)
-  prix_cout_fcfa        Decimal? @map("cost_price_fcfa") @db.Decimal(10, 2)
+  prix_cout_fcfa       Decimal? @map("cost_price_fcfa") @db.Decimal(10, 2)
   sku                   String?  @unique
   code_barre            String?  @map("barcode")
-  categorie_id          String   @db.Uuid
+  categorie_id          Int
   marque                String?
   poids                 Decimal? @db.Decimal(8, 3)
   dimensions            Json?    @db.JsonB
@@ -95,8 +102,8 @@ model Produit {
 
 // Table des variantes de produits
 model VarianteProduit {
-  id                    String   @id @default(cuid()) @db.Uuid
-  produit_id            String   @db.Uuid
+  id                    Int      @id @default(autoincrement())
+  produit_id            Int
   nom                   String
   sku                   String?  @unique
   prix_fcfa             Decimal? @map("price_fcfa") @db.Decimal(10, 2)
@@ -119,12 +126,12 @@ model VarianteProduit {
 
 // Table des images de produits
 model ImageProduit {
-  id                    String  @id @default(cuid()) @db.Uuid
-  produit_id            String  @db.Uuid
-  variante_id           String? @db.Uuid
-  url_image             String  @map("image_url")
-  texte_alternatif      String? @map("alt_text")
-  ordre_tri             Int     @default(0) @map("sort_order")
+  id                    Int      @id @default(autoincrement())
+  produit_id            Int
+  variante_id           Int?
+  url_image             String   @map("image_url")
+  texte_alternatif      String?  @map("alt_text")
+  ordre_tri             Int      @default(0) @map("sort_order")
   est_principale        Boolean @default(false) @map("is_primary")
   cloudinary_public_id  String? @map("cloudinary_public_id")
 
@@ -137,9 +144,9 @@ model ImageProduit {
 
 // Table des commandes
 model Commande {
-  id                   String   @id @default(cuid()) @db.Uuid
+  id                   Int      @id @default(autoincrement())
   numero_commande      String   @unique @map("order_number")
-  utilisateur_id       String   @db.Uuid
+  client_id            Int
   statut               StatutCommande @default(EN_ATTENTE)
   statut_paiement      StatutPaiement @default(EN_ATTENTE) @map("payment_status")
   sous_total_fcfa      Decimal  @map("subtotal_fcfa") @db.Decimal(10, 2)
@@ -157,7 +164,7 @@ model Commande {
   date_modification    DateTime @updatedAt @map("updated_at")
 
   // Relations
-  utilisateur          Utilisateur @relation(fields: [utilisateur_id], references: [id])
+  client               Client @relation(fields: [client_id], references: [id])
   articles             ArticleCommande[]
 
   @@map("orders")
@@ -165,10 +172,10 @@ model Commande {
 
 // Table des articles de commande
 model ArticleCommande {
-  id                   String  @id @default(cuid()) @db.Uuid
-  commande_id          String  @db.Uuid
-  produit_id           String  @db.Uuid
-  variante_id          String? @db.Uuid
+  id                   Int      @id @default(autoincrement())
+  commande_id          Int
+  produit_id           Int
+  variante_id          Int?
   quantite             Int
   prix_fcfa            Decimal @map("price_fcfa") @db.Decimal(10, 2)
   total_fcfa           Decimal @map("total_fcfa") @db.Decimal(10, 2)
@@ -184,8 +191,8 @@ model ArticleCommande {
 
 // Table des adresses
 model Adresse {
-  id                String      @id @default(cuid()) @db.Uuid
-  utilisateur_id    String      @db.Uuid
+  id                Int      @id @default(autoincrement())
+  client_id         Int
   type              TypeAdresse
   prenom            String      @map("first_name")
   nom               String      @map("last_name")
@@ -201,14 +208,14 @@ model Adresse {
   date_creation     DateTime    @default(now()) @map("created_at")
 
   // Relations
-  utilisateur       Utilisateur @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+  client            Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
 
   @@map("addresses")
 }
 
 // Table des codes promotionnels
 model CodePromotionnel {
-  id                     String   @id @default(cuid()) @db.Uuid
+  id                     Int      @id @default(autoincrement())
   code                   String   @unique
   description            String?
   type_remise            TypeRemise @map("discount_type")
@@ -226,10 +233,10 @@ model CodePromotionnel {
 
 // Table des avis clients
 model AvisClient {
-  id                String      @id @default(cuid()) @db.Uuid
-  produit_id        String      @db.Uuid
-  utilisateur_id    String      @db.Uuid
-  commande_id       String?     @db.Uuid
+  id                Int      @id @default(autoincrement())
+  produit_id        Int
+  client_id         Int
+  commande_id       Int?
   note              Int         // 1-5
   titre             String?
   commentaire       String?
@@ -239,39 +246,39 @@ model AvisClient {
 
   // Relations
   produit           Produit     @relation(fields: [produit_id], references: [id], onDelete: Cascade)
-  utilisateur       Utilisateur @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+  client            Client      @relation(fields: [client_id], references: [id], onDelete: Cascade)
 
   @@map("reviews")
 }
 
 // Table des listes de souhaits
 model ListeSouhaits {
-  id                String      @id @default(cuid()) @db.Uuid
-  utilisateur_id    String      @db.Uuid
-  produit_id        String      @db.Uuid
-  date_creation     DateTime    @default(now()) @map("created_at")
+  id                Int      @id @default(autoincrement())
+  client_id         Int
+  produit_id        Int
+  date_creation     DateTime @default(now()) @map("created_at")
 
   // Relations
-  utilisateur       Utilisateur @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+  client            Client      @relation(fields: [client_id], references: [id], onDelete: Cascade)
   produit           Produit     @relation(fields: [produit_id], references: [id], onDelete: Cascade)
 
-  @@unique([utilisateur_id, produit_id])
+  @@unique([client_id, produit_id])
   @@map("wishlists")
 }
 
 // Table du panier
 model Panier {
-  id                String           @id @default(cuid()) @db.Uuid
-  utilisateur_id    String?          @db.Uuid
-  session_id        String?          @map("session_id")
-  produit_id        String           @db.Uuid
-  variante_id       String?          @db.Uuid
+  id                Int      @id @default(autoincrement())
+  client_id         Int?
+  session_id        String?  @map("session_id")
+  produit_id        Int
+  variante_id       Int?
   quantite          Int
-  date_creation     DateTime         @default(now()) @map("created_at")
-  date_modification DateTime         @updatedAt @map("updated_at")
+  date_creation     DateTime @default(now()) @map("created_at")
+  date_modification DateTime @updatedAt @map("updated_at")
 
   // Relations
-  utilisateur       Utilisateur?     @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+  client            Client?          @relation(fields: [client_id], references: [id], onDelete: Cascade)
   produit           Produit          @relation(fields: [produit_id], references: [id], onDelete: Cascade)
   variante          VarianteProduit? @relation(fields: [variante_id], references: [id], onDelete: Cascade)
 
@@ -279,13 +286,6 @@ model Panier {
 }
 
 // Énumérations (Enums)
-enum RoleUtilisateur {
-  CLIENT     @map("customer")
-  ADMIN      @map("admin")
-
-  @@map("user_role")
-}
-
 enum StatutCommande {
   EN_ATTENTE @map("pending")
   CONFIRMEE  @map("confirmed")
