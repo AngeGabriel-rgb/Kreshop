@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
 // Fonction utilitaire pour la gestion des erreurs
@@ -119,6 +120,34 @@ export const productController = {
 
       if (!product || !product.est_actif) {
         return res.status(404).json({ 
+          success: false,
+          message: 'Produit non trouvé'
+        });
+      }
+
+      res.json({
+        success: true,
+        data: product
+      });
+    } catch (error) {
+      handleError(res, error, 'Erreur lors de la récupération du produit');
+    }
+  },
+
+  getProductById: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const product = await prisma.produit.findUnique({
+        where: { id: parseInt(id) },
+        include: {
+          categorie: true,
+          images: true,
+          variantes: true
+        }
+      });
+
+      if (!product || !product.est_actif) {
+        return res.status(404).json({
           success: false,
           message: 'Produit non trouvé'
         });

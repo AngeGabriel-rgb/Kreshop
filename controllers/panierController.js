@@ -1,5 +1,6 @@
 // controllers/panierController.js
-import { PrismaClient } from '@prisma/client';
+import pkg from '@prisma/client';
+const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
 // Créer une entrée dans le panier
