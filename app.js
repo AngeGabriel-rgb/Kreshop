@@ -2,6 +2,9 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/authRoutes.js';
+import productRoutes from './routes/productRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import categorieRoutes from './routes/categorieRoutes.js';
 
 const app = express();
 
@@ -11,6 +14,9 @@ app.use(express.json());
 
 // Routes
 app.use('/auth', authRoutes);
+app.use('/products', productRoutes);
+app.use('/orders', orderRoutes);
+app.use('/categories', categorieRoutes);
 
 // Gestion des erreurs
 app.use((err, req, res, next) => {
@@ -19,7 +25,7 @@ app.use((err, req, res, next) => {
 });
 
 // Démarrer le serveur
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
 });
