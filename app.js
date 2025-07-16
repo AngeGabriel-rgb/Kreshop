@@ -40,6 +40,10 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Quelque chose a mal tourné!' });
 });
 
+app.get('/', (req, res) => {
+  res.send('Hello World');
+});
+
 // Démarrer le serveur
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, '0.0.0.0', () => {
