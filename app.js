@@ -12,6 +12,7 @@ import codePromotionnelRoutes from './routes/codePromotionnelRoutes.js';
 import avisClientRoutes from './routes/avisClientRoutes.js';
 import listeSouhaitsRoutes from './routes/listeSouhaitsRoutes.js';
 import panierRoutes from './routes/panierRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/codes', codePromotionnelRoutes);
 app.use('/avis', avisClientRoutes);
 app.use('/souhaits', listeSouhaitsRoutes);
 app.use('/paniers', panierRoutes);
+app.use('/orders', orderRoutes);
 
 // Gestion des erreurs
 app.use((err, req, res, next) => {

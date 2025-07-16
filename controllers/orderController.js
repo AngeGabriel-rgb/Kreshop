@@ -3,20 +3,13 @@ const { PrismaClient } = pkg;
 const prisma = new PrismaClient();
 
 const orderController = {
-  // Récupérer toutes les commandes (Admin)
+  // Récupérer toutes les commandes
   getAllOrders: async (req, res) => {
     try {
       const orders = await prisma.commande.findMany({
         include: {
-          articles: {
-            include: {
-              produit: true,
-              variante: true
-            }
-          },
-          client: {
-            select: { prenom: true, nom: true, email: true }
-          }
+          articles: true,
+          client: true
         },
         orderBy: { date_creation: 'desc' }
       });
@@ -26,22 +19,15 @@ const orderController = {
     }
   },
 
-  // Récupérer une commande spécifique
+  // Récupérer une commande par ID
   getOrderById: async (req, res) => {
     try {
       const { id } = req.params;
       const order = await prisma.commande.findUnique({
         where: { id: parseInt(id) },
         include: {
-          articles: {
-            include: {
-              produit: true,
-              variante: true
-            }
-          },
-          client: {
-            select: { prenom: true, nom: true, email: true }
-          }
+          articles: true,
+          client: true
         }
       });
       if (!order) {
@@ -56,54 +42,12 @@ const orderController = {
   // Créer une nouvelle commande
   createOrder: async (req, res) => {
     try {
-      const { articles, adresse_livraison, adresse_facturation, methode_paiement } = req.body;
-      let sous_total = 0;
-      const orderItems = [];
-      for (const item of articles) {
-        const produit = await prisma.produit.findUnique({
-          where: { id: item.produit_id },
-          include: { variantes: true }
-        });
-        if (!produit) {
-          return res.status(400).json({ error: `Produit ${item.produit_id} non trouvé` });
-        }
-        let prix = produit.prix_fcfa;
-        if (item.variante_id) {
-          const variante = produit.variantes.find(v => v.id === item.variante_id);
-          if (variante && variante.prix_fcfa) {
-            prix = variante.prix_fcfa;
-          }
-        }
-        const total_item = prix * item.quantite;
-        sous_total += total_item;
-        orderItems.push({
-          produit_id: item.produit_id,
-          variante_id: item.variante_id,
-          quantite: item.quantite,
-          prix_fcfa: prix,
-          total_fcfa: total_item
-        });
-      }
+      const data = req.body;
       const order = await prisma.commande.create({
-        data: {
-          numero_commande: `CMD-${Date.now()}`,
-          client_id: req.user.id,
-          sous_total_fcfa: sous_total,
-          total_fcfa: sous_total,
-          methode_paiement,
-          adresse_livraison,
-          adresse_facturation,
-          articles: {
-            create: orderItems
-          }
-        },
+        data,
         include: {
-          articles: {
-            include: {
-              produit: true,
-              variante: true
-            }
-          }
+          articles: true,
+          client: true
         }
       });
       res.status(201).json(order);
@@ -112,7 +56,7 @@ const orderController = {
     }
   },
 
-  // Mettre à jour une commande (Admin)
+  // Mettre à jour une commande
   updateOrder: async (req, res) => {
     try {
       const { id } = req.params;
@@ -131,7 +75,7 @@ const orderController = {
     }
   },
 
-  // Supprimer une commande (Admin)
+  // Supprimer une commande
   deleteOrder: async (req, res) => {
     try {
       const { id } = req.params;
