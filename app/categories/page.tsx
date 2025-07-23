@@ -1,10 +1,15 @@
-import React from "react"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import { ClientCategories } from "@/components/client-categories"
 
 export default function CategoriesPage() {
   return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-4">Catégories</h1>
-      <p>Cette page affichera la liste des catégories.</p>
-    </main>
+    <div className="min-h-screen bg-gradient-to-br from-coral-50 to-cream-100">
+      <Header />
+      <main>
+        <ClientCategories />
+      </main>
+      <Footer />
+    </div>
   )
-} 
+}

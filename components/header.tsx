@@ -19,11 +19,7 @@ export function Header({ cartItemsCount, onCartClick }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-beige-rose shadow-sm">
-      {/* Top Bar - Promotions */}
-      <div className="bg-corail-doux text-white text-center py-2 text-sm font-medium">
-        🎉 Livraison gratuite à Libreville pour les commandes de plus de 50 000 FCFA
-      </div>
-
+   
       {/* Main Header */}
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
@@ -40,14 +36,14 @@ export function Header({ cartItemsCount, onCartClick }: HeaderProps) {
           {/* Logo */}
           <a href="/" className="flex items-center space-x-2 cursor-pointer" aria-label="Accueil">
             <div className="w-8 h-8 bg-corail-doux rounded-full flex items-center justify-center transition-transform duration-200 hover:scale-110">
-              <span className="text-white font-bold text-lg">G</span>
+              <span className="text-white font-bold text-lg"></span>
             </div>
-            <span className="font-display text-xl font-bold text-brun-chocolat">GabonStyle</span>
+            <span className="font-display text-xl font-bold text-brun-chocolat">KreShop</span>
           </a>
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-8">
-            <a href="/produits" className="text-brun-chocolat hover:text-corail-doux transition-colors font-medium relative group">
+            <a href="/product" className="text-brun-chocolat hover:text-corail-doux transition-colors font-medium relative group">
               Produits
               <span className="absolute left-0 -bottom-1 w-0 h-0.5 bg-corail-doux transition-all duration-300 group-hover:w-full"></span>
             </a>
@@ -105,7 +101,6 @@ export function Header({ cartItemsCount, onCartClick }: HeaderProps) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem>Mon Compte</DropdownMenuItem>
-                <DropdownMenuItem>Mes Commandes</DropdownMenuItem>
                 <DropdownMenuItem>Mes Favoris</DropdownMenuItem>
                 <DropdownMenuItem>Paramètres</DropdownMenuItem>
                 <DropdownMenuItem className="text-red-600">Déconnexion</DropdownMenuItem>

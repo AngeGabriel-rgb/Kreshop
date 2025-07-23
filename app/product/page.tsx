@@ -1,10 +1,15 @@
-import React from "react"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
+import { ClientProducts } from "@/components/client-products"
 
-export default function ProduitsPage() {
+export default function ProductsPage() {
   return (
-    <main className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-4">Tous les produits</h1>
-      <p>Cette page affichera la liste des produits.</p>
-    </main>
+    <div className="min-h-screen bg-gradient-to-br from-coral-50 to-cream-100">
+      <Header />
+      <main>
+        <ClientProducts />
+      </main>
+      <Footer />
+    </div>
   )
-} 
+}
