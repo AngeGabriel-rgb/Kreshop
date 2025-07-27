@@ -42,43 +42,47 @@ export const registerClient = async (req, res) => {
   }
 };
 
-// Inscription Admin (réservé aux super admins)
+// Inscription Admin
 export const registerAdmin = async (req, res) => {
   try {
-    // 1. Vérification de l'autorisation
-    if (!req.user || req.user.role !== 'admin') {
-      return res.status(403).json({ 
-        message: 'Action réservée aux administrateurs',
-        code: 'ADMIN_ACCESS_REQUIRED'
-      });
-    }
+    const { email, password, firstName, lastName, phone, adminKey } = req.body // Ajout de adminKey
 
-    // 2. Validation des données d'entrée
-    const { email, password, firstName, lastName, phone } = req.body;
-    
+    // 1. Validation des données d'entrée
     if (!email || !password || !firstName || !lastName) {
       return res.status(400).json({
-        message: 'Tous les champs obligatoires doivent être remplis',
-        requiredFields: ['email', 'password', 'firstName', 'lastName'],
-        code: 'MISSING_REQUIRED_FIELDS'
-      });
+        message: "Tous les champs obligatoires doivent être remplis",
+        requiredFields: ["email", "password", "firstName", "lastName"],
+        code: "MISSING_REQUIRED_FIELDS",
+      })
+    }
+
+    // Déterminer si l'inscription est autorisée sans authentification admin existante
+    // Ceci est pour la création du premier admin ou via une clé secrète
+    const isInitialAdminRegistration = adminKey && adminKey === process.env.ADMIN_REGISTRATION_KEY
+
+    // 2. Vérification de l'autorisation
+    // Si ce n'est pas une inscription admin initiale (avec clé), alors exiger une authentification admin existante
+    if (!isInitialAdminRegistration && (!req.user || req.user.role !== "admin")) {
+      return res.status(403).json({
+        message: "Action réservée aux administrateurs ou nécessite une clé d'enregistrement admin valide.",
+        code: "ADMIN_ACCESS_REQUIRED",
+      })
     }
 
     // 3. Vérification de l'email existant
-    const existingAdmin = await prisma.admin.findUnique({ 
+    const existingAdmin = await prisma.admin.findUnique({
       where: { email },
-      select: { id: true } // Ne récupère que l'ID pour plus d'efficacité
-    });
-
+      select: { id: true },
+    })
     if (existingAdmin) {
-      return res.status(409).json({ 
-        message: 'Un administrateur avec cet email existe déjà',
-        code: 'EMAIL_ALREADY_EXISTS'
-      });
+      return res.status(409).json({
+        message: "Un administrateur avec cet email existe déjà",
+        code: "EMAIL_ALREADY_EXISTS",
+      })
     }
 
     // 4. Hachage du mot de passe
-    const hashedPassword = await bcryptjs.hash(password, 12); // Salt rounds augmenté à 12
+    const hashedPassword = await bcryptjs.hash(password, 12)
 
     // 5. Création de l'admin
     const admin = await prisma.admin.create({
@@ -89,62 +93,59 @@ export const registerAdmin = async (req, res) => {
         nom: lastName,
         telephone: phone,
       },
-      select: { // Ne retourne pas le mot de passe dans la réponse
+      select: {
         id: true,
         email: true,
         prenom: true,
         nom: true,
         telephone: true,
         est_actif: true,
-        date_creation: true
-      }
-    });
+        date_creation: true,
+      },
+    })
 
     // 6. Génération du token JWT
     const token = jwt.sign(
       {
         id: admin.id,
         email: admin.email,
-        role: 'admin',
-        iss: 'your-app-name', // Émetteur
-        aud: 'your-app-client' // Audience
+        role: "admin",
+        iss: "your-app-name",
+        aud: "your-app-client",
       },
       process.env.JWT_SECRET,
-      { 
-        expiresIn: '12h' // Durée de vie réduite pour plus de sécurité
-      }
-    );
+      {
+        expiresIn: "12h",
+      },
+    )
 
     // 7. Réponse réussie
     res.status(201).json({
       success: true,
-      message: 'Administrateur créé avec succès',
+      message: "Administrateur créé avec succès",
       admin,
       token,
-      expiresIn: '12h'
-    });
-
+      expiresIn: "12h",
+    })
   } catch (error) {
-    console.error('Erreur lors de la création admin:', error);
-    
-    // Gestion des erreurs spécifiques à Prisma
+    console.error("Erreur lors de la création admin:", error)
+
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') {
+      if (error.code === "P2002") {
         return res.status(400).json({
-          message: 'Violation de contrainte unique',
+          message: "Violation de contrainte unique",
           target: error.meta?.target,
-          code: 'UNIQUE_CONSTRAINT_VIOLATION'
-        });
+          code: "UNIQUE_CONSTRAINT_VIOLATION",
+        })
       }
     }
-
     res.status(500).json({
-      message: 'Une erreur est survenue lors de la création de l\'administrateur',
-      code: 'INTERNAL_SERVER_ERROR',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+      message: "Une erreur est survenue lors de la création de l'administrateur",
+      code: "INTERNAL_SERVER_ERROR",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    })
   }
-};
+}
 
 // Connexion
 export const login = async (req, res) => {
