@@ -150,15 +150,21 @@ export const registerAdmin = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    let user;
+    let role; // Déclarez la variable role ici
 
     // Vérifier d'abord dans la table client
-    let user = await prisma.client.findUnique({ where: { email } });
-    let role = 'client';
-
-    // Si pas trouvé, vérifier dans la table admin
-    if (!user) {
-      user = await prisma.admin.findUnique({ where: { email } });
-      role = 'admin';
+    const clientUser = await prisma.client.findUnique({ where: { email } });
+    if (clientUser) {
+      user = clientUser;
+      role = 'client';
+    } else {
+      // Si pas trouvé, vérifier dans la table admin
+      const adminUser = await prisma.admin.findUnique({ where: { email } });
+      if (adminUser) {
+        user = adminUser;
+        role = 'admin';
+      }
     }
 
     // Si aucun utilisateur trouvé
@@ -176,30 +182,11 @@ export const login = async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: '72h' }
     );
 
-    res.json({ user, token });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Récupérer le profil utilisateur
-export const getProfile = async (req, res) => {
-  try {
-    let user;
-    if (req.user.role === 'client') {
-      user = await prisma.client.findUnique({ where: { id: req.user.id } });
-    } else {
-      user = await prisma.admin.findUnique({ where: { id: req.user.id } });
-    }
-
-    if (!user) {
-      return res.status(404).json({ message: 'Utilisateur non trouvé' });
-    }
-
-    res.json(user);
+    // Retourner l'utilisateur, le token ET le rôle explicitement
+    res.json({ user, token, role }); // <-- C'EST LE CHANGEMENT CLÉ
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
