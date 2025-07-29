@@ -1,6 +1,6 @@
 "use client"
 
-import { AdminLayout } from "@/components/admin/admin-layout"
+import AdminLayout from "@/components/admin/admin-layout"
 import { AdminDashboard } from "@/components/admin/admin-dashboard"
 
 export default function AdminPage() {
@@ -9,4 +9,4 @@ export default function AdminPage() {
       <AdminDashboard />
     </AdminLayout>
   )
-}
+} 

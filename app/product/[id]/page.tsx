@@ -1,8 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
 import { ProductDetailView } from "@/components/product-detail-view"
 import { CartSidebar } from "@/components/cart-sidebar"
 import { Card, CardContent } from "@/components/ui/card"
@@ -44,7 +42,6 @@ export default function ProductDetailPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header cartItemsCount={cartItemsCount} onCartClick={() => setIsCartOpen(true)} />
 
       <main>
         {product ? (
@@ -65,7 +62,6 @@ export default function ProductDetailPage() {
         )}
       </main>
 
-      <Footer />
 
       <CartSidebar
         isOpen={isCartOpen}

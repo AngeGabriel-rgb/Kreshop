@@ -53,28 +53,27 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-corail-doux rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">G</span>
+              <div className="w-8 h-8 bg-accent-foreground rounded-full flex items-center justify-center">
+                <span className="text-primary-foreground font-bold text-lg">K</span>
               </div>
-              <span className="font-display text-xl font-bold">GabonStyle</span>
+              <span className="font-bold text-xl">KreShop</span>
             </div>
-            <p className="text-beige-rose leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed">
               Votre boutique de référence pour la mode gabonaise authentique. Tradition et modernité se rencontrent dans
               chaque création.
             </p>
             <div className="flex space-x-4">
-              <Button variant="ghost" size="icon" className="text-beige-creme hover:text-corail-doux">
+              <Button variant="ghost" size="icon" className="text-primary-foreground hover:text-accent-foreground">
                 <Facebook className="w-5 h-5" />
               </Button>
-              <Button variant="ghost" size="icon" className="text-beige-creme hover:text-corail-doux">
+              <Button variant="ghost" size="icon" className="text-primary-foreground hover:text-accent-foreground">
                 <Instagram className="w-5 h-5" />
               </Button>
-              <Button variant="ghost" size="icon" className="text-beige-creme hover:text-corail-doux">
+              <Button variant="ghost" size="icon" className="text-primary-foreground hover:text-accent-foreground">
                 <Twitter className="w-5 h-5" />
               </Button>
             </div>
           </div>
-
           {/* Quick Links */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Liens Rapides</h3>
