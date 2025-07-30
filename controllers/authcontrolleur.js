@@ -147,47 +147,89 @@ export const registerAdmin = async (req, res) => {
   }
 }
 
-// Connexion
-export const login = async (req, res) => {
+// Connexion Client
+export const loginClient = async (req, res) => {
   try {
     const { email, password } = req.body;
-    let user;
-    let role; // Déclarez la variable role ici
 
-    // Vérifier d'abord dans la table client
-    const clientUser = await prisma.client.findUnique({ where: { email } });
-    if (clientUser) {
-      user = clientUser;
-      role = 'client';
-    } else {
-      // Si pas trouvé, vérifier dans la table admin
-      const adminUser = await prisma.admin.findUnique({ where: { email } });
-      if (adminUser) {
-        user = adminUser;
-        role = 'admin';
-      }
-    }
-
-    // Si aucun utilisateur trouvé
-    if (!user) {
+    // Vérifier si l'utilisateur existe dans la table client
+    const client = await prisma.client.findUnique({ where: { email } });
+    if (!client) {
       return res.status(401).json({ message: 'Identifiants invalides' });
     }
 
     // Vérifier le mot de passe
-    const passwordMatch = await bcryptjs.compare(password, user.mot_de_passe_hash);
+    const passwordMatch = await bcryptjs.compare(password, client.mot_de_passe_hash);
     if (!passwordMatch) {
       return res.status(401).json({ message: 'Identifiants invalides' });
     }
 
+    // Vérifier si le client est actif
+    if (!client.est_actif) {
+      return res.status(403).json({ message: 'Compte désactivé' });
+    }
+
     // Générer le token JWT
     const token = jwt.sign(
-      { id: user.id, email: user.email, role },
+      { id: client.id, email: client.email, role: 'client' },
       process.env.JWT_SECRET,
       { expiresIn: '72h' }
     );
 
-    // Retourner l'utilisateur, le token ET le rôle explicitement
-    res.json({ user, token, role }); // <-- C'EST LE CHANGEMENT CLÉ
+    // Retourner les informations du client et le token
+    res.json({ 
+      user: client, 
+      token, 
+      role: 'client',
+      message: 'Connexion client réussie'
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Connexion Admin
+export const loginAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Vérifier si l'utilisateur existe dans la table admin
+    const admin = await prisma.admin.findUnique({ where: { email } });
+    if (!admin) {
+      return res.status(401).json({ message: 'Identifiants invalides' });
+    }
+
+    // Vérifier le mot de passe
+    const passwordMatch = await bcryptjs.compare(password, admin.mot_de_passe_hash);
+    if (!passwordMatch) {
+      return res.status(401).json({ message: 'Identifiants invalides' });
+    }
+
+    // Vérifier si l'admin est actif
+    if (!admin.est_actif) {
+      return res.status(403).json({ message: 'Compte administrateur désactivé' });
+    }
+
+    // Générer le token JWT
+    const token = jwt.sign(
+      { 
+        id: admin.id, 
+        email: admin.email, 
+        role: 'admin',
+        iss: "your-app-name",
+        aud: "your-app-client"
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '12h' }
+    );
+
+    // Retourner les informations de l'admin et le token
+    res.json({ 
+      user: admin, 
+      token, 
+      role: 'admin',
+      message: 'Connexion administrateur réussie'
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
