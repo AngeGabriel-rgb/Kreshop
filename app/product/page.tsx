@@ -17,7 +17,7 @@ export default function ProductsPage() {
       id: "prod1",
       name: "T-shirt Africain",
       price: 20000,
-      image: "/placeholder.svg?height=300&width=400",
+      image: "https://img.sonofatailor.com/images/customizer/product/highneck/DeepBlue_Regular.jpg",
       description: "Un t-shirt en coton bio avec des motifs africains modernes.",
       category: "Mode Moderne",
       inStock: true,
@@ -31,7 +31,7 @@ export default function ProductsPage() {
       id: "prod2",
       name: "Collier Perles Africaines",
       price: 15000,
-      image: "/placeholder.svg?height=300&width=400",
+      image: "https://bijouxcailloux.fr/wp-content/uploads/2024/07/collier-cravate-justine.jpg",
       description: "Un collier unique fait à la main avec des perles colorées.",
       category: "Accessoires Uniques",
       inStock: true,
@@ -45,7 +45,7 @@ export default function ProductsPage() {
       id: "prod3",
       name: "Sandales Cuir Tressé",
       price: 35000,
-      image: "/placeholder.svg?height=300&width=400",
+      image: "https://petits-souliers.com/34253-large_default/sandales-cuir-tresse-cognac-3629-plumers.jpg",
       description: "Sandales confortables en cuir tressé, parfaites pour l'été.",
       category: "Chaussures Artisanales",
       inStock: false,
@@ -59,7 +59,7 @@ export default function ProductsPage() {
       id: "prod4",
       name: "Chemise Wax Moderne",
       price: 45000,
-      image: "/placeholder.svg?height=300&width=400",
+      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRFzrFi-_mgiz1xYX6R95NpNlrHOwUB1H7yTA&s",
       description: "Chemise moderne avec des imprimés wax vibrants.",
       category: "Mode Moderne",
       inStock: true,
@@ -69,39 +69,13 @@ export default function ProductsPage() {
       colors: [],
       sizes: []
     },
-    {
-      id: "prod5",
-      name: "Sac à Main Bogolan",
-      price: 55000,
-      image: "/placeholder.svg?height=300&width=400",
-      description: "Sac à main en tissu Bogolan, alliant tradition et tendance.",
-      category: "Accessoires Uniques",
-      inStock: true,
-      isNew: false,
-      rating: 0,
-      reviews: 0,
-      colors: [],
-      sizes: []
-    },
-    {
-      id: "prod6",
-      name: "Ensemble Pagne Brodé",
-      price: 90000,
-      image: "/placeholder.svg?height=300&width=400",
-      description: "Ensemble pagne brodé pour des occasions spéciales.",
-      category: "Vêtements Traditionnels",
-      inStock: true,
-      isNew: false,
-      rating: 0,
-      reviews: 0,
-      colors: [],
-      sizes: []
-    },
+
   ]
 
   const handleAddToCart = (product: Product) => {
-    // For demonstration, adding with default size/color. In a real app, these would be selected by user.
-    addToCart(product, 1, "Unique", "Standard")
+    // Pour la démonstration, on ajoute avec une quantité de 1. 
+    // Les tailles et couleurs seraient sélectionnées par l'utilisateur dans une vraie application.
+    addToCart(product, 1)
   }
 
   return (

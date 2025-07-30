@@ -41,7 +41,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <Header cartItemsCount={cartItemsCount} onCartClick={() => setIsCartOpen(true)} />
+      <Header />
 
       <main>
         <HeroSection />
@@ -53,10 +53,6 @@ export default function HomePage() {
       <CartSidebar
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
-        items={cartItems}
-        total={cartTotal}
-        onUpdateQuantity={updateQuantity}
-        onRemoveItem={removeFromCart}
       />
 
       {selectedProduct && (

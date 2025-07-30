@@ -26,7 +26,7 @@ export default function Navigation() {
     if (isAuthenticated()) {
       setUser(getUser())
     }
-  }, [pathname])
+  }, [])
 
   const handleLogout = async () => {
     setIsLoading(true)

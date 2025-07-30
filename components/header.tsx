@@ -15,49 +15,59 @@ import {
   DropdownMenuTrigger,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { useAuth, logout } from "@/lib/auth"
-import { useCart } from "@/context/cart-context" // Import useCart
+import { useAuth } from "@/lib/auth"
+import { useCart } from "@/context/cart-context"
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [user, setUser] = useState<any>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const { getUser, isAuthenticated, isAdmin, isClient: isClientRole } = useAuth()
+  const [displayedUser, setDisplayedUser] = useState<any>(null)
+  const [isLoadingLogout, setIsLoadingLogout] = useState(false)
+  const {
+    getUser,
+    isAuthenticated,
+    isAdmin,
+    isClient,
+    logout: authLogout,
+  } = useAuth()
   const router = useRouter()
-  const { cartItemsCount, setIsCartOpen } = useCart() // Get cart state from context
+  const { cartItemsCount, setIsCartOpen } = useCart() // Keep setIsCartOpen for the sidebar if needed elsewhere
 
-  const [hasMounted, setHasMounted] = useState(false) // NEW: Add hasMounted state
+  const [hasMounted, setHasMounted] = useState(false)
 
   const categories = ["Vêtements", "Accessoires", "Chaussures", "Autres"]
 
-  // Load user data on initial load
   useEffect(() => {
-    setHasMounted(true) // NEW: Set to true after component mounts on client
-    if (isAuthenticated()) {
-      setUser(getUser())
-    }
-  }, [isAuthenticated, getUser])
+    setHasMounted(true)
+    const user = getUser()
+    setDisplayedUser(user)
+  }, []) // Suppression de getUser des dépendances
 
   const handleLogout = async () => {
-    setIsLoading(true)
+    setIsLoadingLogout(true)
     try {
-      await logout()
-      setUser(null)
-      router.push("/")
+      if (displayedUser?.role === "admin") {
+        await authLogout("admin")
+        router.push("/admin/login")
+      } else if (displayedUser?.role === "client") {
+        await authLogout("client")
+        router.push("/login")
+      } else {
+        console.warn("No specific user role to log out. Clearing displayed user.")
+        setDisplayedUser(null)
+        router.push("/")
+      }
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error)
     } finally {
-      setIsLoading(false)
+      setIsLoadingLogout(false)
     }
   }
 
-  const handleCartClick = () => {
-    setIsCartOpen(true) // Open cart sidebar using context
-  }
+  // Removed handleCartClick as the button will now be a direct link
 
   const userIsAuthenticated = hasMounted && isAuthenticated()
   const userIsAdmin = hasMounted && isAdmin()
-  const userIsClient = hasMounted && isClientRole()
+  const userIsClient = hasMounted && isClient()
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b shadow-sm">
@@ -90,7 +100,7 @@ export function Header() {
             </Link>
             {hasMounted && userIsAuthenticated && (
               <Link
-                href={userIsAdmin ? "/admin" : "/client/dashboard"}
+                href={userIsAdmin ? "/admin" : "/dashboard"}
                 className="hover:text-primary transition-colors font-medium relative group"
               >
                 Dashboard
@@ -131,12 +141,10 @@ export function Header() {
               </Button>
             )}
 
-            {hasMounted && userIsAuthenticated && userIsClient && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="relative transition-all duration-200 hover:scale-105 focus:ring-2"
-                onClick={handleCartClick}
+            {hasMounted && userIsClient && (
+              <Link
+                href="/panier" // Changed to Link and added href
+                className="relative transition-all duration-200 hover:scale-105 focus:ring-2 p-2 rounded-md hover:bg-accent hover:text-accent-foreground" // Added styling to mimic button
               >
                 <ShoppingBag className="h-5 w-5" />
                 {cartItemsCount > 0 && (
@@ -144,11 +152,11 @@ export function Header() {
                     {cartItemsCount}
                   </Badge>
                 )}
-              </Button>
+              </Link>
             )}
 
             {hasMounted ? (
-              userIsAuthenticated && user ? (
+              userIsAuthenticated && displayedUser ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -162,9 +170,9 @@ export function Header() {
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuLabel>
                       <div className="px-2 py-1.5 text-sm font-medium">
-                        {user.prenom} {user.nom}
+                        {displayedUser.prenom} {displayedUser.nom}
                         <div className="flex items-center mt-1">
-                          {userIsAdmin ? (
+                          {displayedUser.role === "admin" ? (
                             <Badge variant="default" className="text-xs">
                               <Shield className="h-3 w-3 mr-1" />
                               Admin
@@ -181,14 +189,15 @@ export function Header() {
                     <DropdownMenuSeparator />
 
                     <DropdownMenuItem asChild>
-                      <Link href={userIsAdmin ? "/admin" : "/client/dashboard"}>Dashboard</Link>
+                      <Link href={displayedUser.role === "admin" ? "/admin" : "/dashboard"}>
+                        Dashboard
+                      </Link>
                     </DropdownMenuItem>
 
                     <DropdownMenuItem asChild>
                       <Link href="/profile">Mon Compte</Link>
                     </DropdownMenuItem>
 
-                    {/* Corrected conditional rendering for multiple DropdownMenuItems */}
                     {userIsClient && (
                       <DropdownMenuItem asChild>
                         <Link href="/orders">Mes Commandes</Link>
@@ -217,11 +226,11 @@ export function Header() {
 
                     <DropdownMenuItem
                       onClick={handleLogout}
-                      disabled={isLoading}
+                      disabled={isLoadingLogout}
                       className="text-red-600 focus:text-red-600"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
-                      {isLoading ? "Déconnexion..." : "Déconnexion"}
+                      {isLoadingLogout ? "Déconnexion..." : "Déconnexion"}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -286,7 +295,7 @@ export function Header() {
                 </Link>
                 {userIsAuthenticated && (
                   <Link
-                    href={userIsAdmin ? "/admin" : "/client/dashboard"}
+                    href={userIsAdmin ? "/admin" : "/dashboard"}
                     className="hover:text-primary transition-colors font-medium py-2"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >

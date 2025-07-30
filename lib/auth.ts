@@ -1,18 +1,13 @@
-"use client"
-
 import { fetchApi } from "./api"
-import { useCallback } from "react"
 
 // Types spécifiques à l'authentification
 export interface AuthResponse {
+  user: any
   token: string
-  client?: any
-  admin?: any
-  user?: any
+  role: 'client' | 'admin'
+  message: string
   success?: boolean
-  message?: string
   expiresIn?: string
-  role?: string // Ajout du champ role
 }
 
 export interface LoginPayload {
@@ -34,6 +29,7 @@ export interface RegisterAdminPayload {
   firstName: string
   lastName: string
   phone?: string
+  adminKey?: string // Clé secrète pour créer le premier admin
 }
 
 export interface ProfileResponse {
@@ -44,11 +40,21 @@ export interface ProfileResponse {
   telephone?: string
   est_actif?: boolean
   date_creation: string
+  role?: 'client' | 'admin'
 }
 
-// Fonction de connexion
-export const login = async (data: LoginPayload): Promise<AuthResponse> => {
-  return fetchApi<AuthResponse>("/auth/login", {
+// Fonction de connexion client
+export const loginClient = async (data: LoginPayload): Promise<AuthResponse> => {
+  return fetchApi<AuthResponse>("/auth/login/client", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  })
+}
+
+// Fonction de connexion admin
+export const loginAdmin = async (data: LoginPayload): Promise<AuthResponse> => {
+  return fetchApi<AuthResponse>("/auth/login/admin", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -64,14 +70,20 @@ export const registerClient = async (data: RegisterClientPayload): Promise<AuthR
   })
 }
 
-// Fonction d'inscription admin (nécessite un token d'admin)
-export const registerAdmin = async (data: RegisterAdminPayload, token: string): Promise<AuthResponse> => {
+// Fonction d'inscription admin (peut utiliser une clé secrète ou un token d'admin)
+export const registerAdmin = async (data: RegisterAdminPayload, token?: string): Promise<AuthResponse> => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  }
+  
+  // Si un token est fourni, l'utiliser pour l'autorisation
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
   return fetchApi<AuthResponse>("/auth/register/admin", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-    },
+    headers,
     body: JSON.stringify(data),
   })
 }
@@ -117,48 +129,73 @@ export const logout = async (token?: string): Promise<void> => {
   if (typeof window !== "undefined") {
     localStorage.removeItem("token")
     localStorage.removeItem("user")
+    localStorage.removeItem("userRole")
   }
 }
 
-// Hook personnalisé pour l'authentification (optionnel)
+// Hook personnalisé pour l'authentification
 export const useAuth = () => {
-  const getToken = useCallback((): string | null => {
+  const getToken = (): string | null => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("token")
     }
     return null
-  }, [])
+  }
 
-  const getUser = useCallback((): any | null => {
+  const getUser = (): any | null => {
     if (typeof window !== "undefined") {
       const userStr = localStorage.getItem("user")
       return userStr ? JSON.parse(userStr) : null
     }
     return null
-  }, [])
+  }
 
-  const isAuthenticated = useCallback((): boolean => {
+  const getUserRole = (): 'client' | 'admin' | null => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("userRole") as 'client' | 'admin' | null
+    }
+    return null
+  }
+
+  const isAuthenticated = (): boolean => {
     return !!getToken()
-  }, [getToken]) // Dependency on getToken
+  }
 
-  const isAdmin = useCallback((): boolean => {
-    const user = getUser()
-    // Utilise le champ 'role' directement si disponible, sinon l'ancienne logique
-    return user?.role === "admin" || !!user?.admin
-  }, [getUser])
+  const isAdmin = (): boolean => {
+    const role = getUserRole()
+    return role === "admin"
+  }
 
-  const isClient = useCallback((): boolean => {
-    const user = getUser()
-    // Utilise le champ 'role' directement si disponible, sinon l'ancienne logique
-    return user?.role === "client" || !!user?.client
-  }, [getUser])
+  const isClient = (): boolean => {
+    const role = getUserRole()
+    return role === "client"
+  }
+
+  const setAuthData = (authResponse: AuthResponse): void => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("token", authResponse.token)
+      localStorage.setItem("user", JSON.stringify(authResponse.user))
+      localStorage.setItem("userRole", authResponse.role)
+    }
+  }
+
+  const clearAuthData = (): void => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      localStorage.removeItem("userRole")
+    }
+  }
 
   return {
     getToken,
     getUser,
+    getUserRole,
     isAuthenticated,
     isAdmin,
     isClient,
+    setAuthData,
+    clearAuthData,
     logout,
   }
 }

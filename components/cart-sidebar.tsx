@@ -3,7 +3,8 @@ import { X, Plus, Minus, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { useCart } from "@/context/cart-context" // Import useCart
+import { useCart } from "@/context/cart-context"
+import { useRouter } from "next/navigation" // Import useRouter
 
 interface CartSidebarProps {
   isOpen: boolean
@@ -12,8 +13,14 @@ interface CartSidebarProps {
 
 export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
   const { cartItems, cartTotal, cartItemsCount, updateQuantity, removeFromCart } = useCart()
+  const router = useRouter() // Initialize useRouter
 
   if (!isOpen) return null
+
+  const handleCheckoutClick = () => {
+    onClose() // Close the sidebar
+    router.push("/payment") // Navigate to the payment page
+  }
 
   return (
     <>
@@ -45,7 +52,10 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
             ) : (
               <div className="space-y-4">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="flex space-x-3 p-3 border rounded-lg">
+                  <div
+                    key={`${item.id}-${item.size || ""}-${item.color || ""}`}
+                    className="flex space-x-3 p-3 border rounded-lg"
+                  >
                     <img
                       src={item.image || "/placeholder.svg"}
                       alt={item.name}
@@ -53,41 +63,41 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
                     />
                     <div className="flex-1">
                       <h3 className="font-medium text-sm">{item.name}</h3>
-                      {(item.sizes?.length || item.colors?.length) && (
+                      {(item.size || item.color) && (
                         <p className="text-xs text-muted-foreground">
-                          {item.sizes?.length > 0 && `Tailles: ${item.sizes.join(", ")}`}
-                          {item.sizes?.length > 0 && item.colors?.length > 0 && " • "}
-                          {item.colors?.length > 0 && `Couleurs: ${item.colors.join(", ")}`}
+                          {item.size && `Taille: ${item.size}`}
+                          {item.size && item.color && " • "}
+                          {item.color && `Couleur: ${item.color}`}
                         </p>
                       )}
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="font-semibold">{item.price.toLocaleString()} FCFA</span>
-                        <div className="flex items-center space-x-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-6 w-6 bg-transparent"
-                            onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="text-sm font-medium w-8 text-center">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-6 w-6 bg-transparent"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
+                    </div>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="font-semibold">{item.price.toLocaleString()} FCFA</span>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6 bg-transparent"
+                          onClick={() => updateQuantity(item.id, Math.max(0, item.quantity - 1))}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="text-sm font-medium w-8 text-center">{item.quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-6 w-6 bg-transparent"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
                       </div>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 text-red-500 hover:text-red-700"
-                      onClick={() => removeFromCart(item.id)}
+                      onClick={() => removeFromCart(item.id)} // removeFromCart still uses only ID, consider if you need to remove specific variant
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -106,7 +116,9 @@ export function CartSidebar({ isOpen, onClose }: CartSidebarProps) {
               </div>
               <Separator />
               <div className="space-y-2">
-                <Button className="w-full">Passer la commande</Button>
+                <Button className="w-full" onClick={handleCheckoutClick}>
+                  Passer la commande
+                </Button>
                 <Button variant="outline" className="w-full bg-transparent" onClick={onClose}>
                   Continuer les achats
                 </Button>

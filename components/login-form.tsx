@@ -1,14 +1,14 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock } from "lucide-react"
-import { login } from "@/lib/auth"
+import { loginClient, useAuth } from "@/lib/auth"
 import type { LoginPayload } from "@/lib/auth"
 
 interface LoginData {
@@ -24,6 +24,8 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const router = useRouter()
+  const { setAuthData, isAuthenticated, clearAuthData } = useAuth()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -33,6 +35,12 @@ export default function LoginForm() {
     setError("")
   }
 
+  const handleLogout = () => {
+    clearAuthData()
+    setSuccess("Déconnexion réussie. Vous pouvez maintenant vous connecter.")
+    setTimeout(() => setSuccess(""), 3000)
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -40,28 +48,25 @@ export default function LoginForm() {
     setSuccess("")
 
     try {
+      // Déconnexion automatique avant nouvelle connexion
+      clearAuthData()
+
       const loginData: LoginPayload = {
         email: formData.email,
         password: formData.password,
       }
 
-      const response = await login(loginData)
+      const response = await loginClient(loginData)
+
+      // Utiliser setAuthData pour stocker les données d'authentification
+      setAuthData(response)
 
       setSuccess("Connexion réussie !")
-      // Stocker le token et l'utilisateur
-      localStorage.setItem("token", response.token)
-
-      // Gérer les différents types de réponse (client ou admin)
-      // Utiliser le rôle renvoyé par le backend si disponible, sinon l'ancienne logique
-      const user = response.user || response.client || response.admin
-      if (user && response.role) {
-        localStorage.setItem("user", JSON.stringify({ ...user, role: response.role }))
-      } else if (user) {
-        // Fallback pour l'ancienne logique si le rôle n'est pas explicitement renvoyé
-        localStorage.setItem("user", JSON.stringify({ ...user, role: response.client ? "client" : "admin" }))
-      }
-
-      console.log("Utilisateur connecté:", user)
+      
+      // Rediriger vers le dashboard client
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 1000)
     } catch (error) {
       setError(error instanceof Error ? error.message : "Erreur lors de la connexion")
     } finally {
@@ -71,6 +76,24 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Afficher un bouton de déconnexion si déjà connecté */}
+      {isAuthenticated() && (
+        <Alert className="border-orange-200 bg-orange-50 text-orange-800">
+          <AlertDescription>
+            Vous êtes déjà connecté. 
+            <Button 
+              type="button" 
+              variant="outline" 
+              size="sm" 
+              onClick={handleLogout}
+              className="ml-2"
+            >
+              Se déconnecter
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <div className="relative">

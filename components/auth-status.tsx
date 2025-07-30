@@ -13,10 +13,16 @@ export default function AuthStatus() {
   const { getUser, isAuthenticated, isAdmin, isClient } = useAuth()
 
   useEffect(() => {
+    // Vérifier si l'utilisateur est authentifié avant de récupérer les données
     if (isAuthenticated()) {
-      setUser(getUser())
+      const currentUser = getUser()
+      if (currentUser && currentUser !== user) {
+        setUser(currentUser)
+      }
+    } else {
+      setUser(null)
     }
-  }, [])
+  }, []) // Se déclenche une seule fois au montage
 
   const handleLogout = async () => {
     setIsLoading(true)

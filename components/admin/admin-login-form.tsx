@@ -1,16 +1,15 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock, Shield } from "lucide-react"
-import { login } from "@/lib/auth"
+import { loginAdmin, useAuth } from "@/lib/auth"
 import type { LoginPayload } from "@/lib/auth"
-import { useRouter } from "next/navigation"
 
 interface LoginData {
   email: string
@@ -26,6 +25,7 @@ export default function AdminLoginForm() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const router = useRouter()
+  const { setAuthData } = useAuth()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -47,28 +47,22 @@ export default function AdminLoginForm() {
         password: formData.password,
       }
 
-      const response = await login(loginData)
-
-      // Stocker le token et l'utilisateur
-      localStorage.setItem("token", response.token)
-
-      const user = response.user || response.client || response.admin
-      if (user && response.role) {
-        localStorage.setItem("user", JSON.stringify({ ...user, role: response.role }))
-      } else if (user) {
-        localStorage.setItem("user", JSON.stringify({ ...user, role: response.client ? "client" : "admin" }))
-      }
+      const response = await loginAdmin(loginData)
 
       // Vérifier si l'utilisateur est un administrateur
       if (response.role === "admin") {
+        // Utiliser setAuthData pour stocker les données d'authentification
+        setAuthData(response)
+        
         setSuccess("Connexion administrateur réussie !")
-        router.push("/admin") // Rediriger vers le tableau de bord admin
+        
+        // Rediriger vers le dashboard admin
+        setTimeout(() => {
+          router.push("/admin")
+        }, 1000)
       } else {
-        // Si l'utilisateur n'est pas un admin, même si la connexion a réussi,
-        // on affiche une erreur et on le déconnecte pour éviter l'accès non autorisé.
+        // Si l'utilisateur n'est pas un admin, afficher une erreur
         setError("Accès refusé : Ce formulaire est réservé aux administrateurs.")
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Erreur lors de la connexion")

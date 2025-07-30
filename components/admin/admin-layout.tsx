@@ -44,9 +44,8 @@ import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import ProtectedRoute from "@/components/protected-route"
-import { Suspense } from "react"
 
 interface AdminLayoutProps {
   children: React.ReactNode
@@ -61,14 +60,14 @@ function AppSidebar() {
 
   useEffect(() => {
     setUser(getUser())
-  }, [getUser])
+  }, [getUser]) // getUser is now a stable reference due to useCallback in useAuth
 
   const handleLogout = async () => {
     setIsLoadingLogout(true)
     try {
       await authLogout()
       setUser(null)
-      router.push("/admin/login") 
+      router.push("/admin/login")
     } catch (error) {
       console.error("Erreur lors de la déconnexion:", error)
     } finally {

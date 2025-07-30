@@ -9,7 +9,7 @@ export interface User {
   telephone?: string
   est_actif?: boolean
   date_creation: string
-  date_modification: string // Ajouté pour la mise à jour
+  role?: 'client' | 'admin'
 }
 
 export interface Client extends User {
@@ -21,10 +21,10 @@ export interface Admin extends User {
 }
 
 // Types d'énumérations
-export type StatutCommande = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"
-export type StatutPaiement = "pending" | "paid" | "failed" | "refunded"
-export type TypeAdresse = "shipping" | "billing"
-export type TypeRemise = "percentage" | "fixed_amount"
+export type StatutCommande = "EN_ATTENTE" | "CONFIRMEE" | "TRAITEE" | "EXPEDIEE" | "LIVREE" | "ANNULEE"
+export type StatutPaiement = "EN_ATTENTE" | "PAYE" | "ECHEC" | "REMBOURSE"
+export type TypeAdresse = "LIVRAISON" | "FACTURATION"
+export type TypeRemise = "POURCENTAGE" | "MONTANT_FIXE"
 
 // Interfaces enrichies (exemple pour un système e-commerce complet)
 export interface Produit {
@@ -83,6 +83,14 @@ export interface Commande {
   date_modification: string
 }
 
+// Types d'erreur améliorés
+export interface ApiError {
+  message: string
+  code?: string
+  status?: number
+  details?: any
+}
+
 // Helper fetch avec gestion d'erreurs améliorée
 export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
   try {
@@ -96,29 +104,59 @@ export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T
 
     if (!response.ok) {
       const errorText = await response.text()
-      let errorMessage
+      let errorMessage: string
+      let errorCode: string | undefined
 
       try {
         const errorJson = JSON.parse(errorText)
         errorMessage = errorJson.message || errorText
+        errorCode = errorJson.code
       } catch {
         errorMessage = errorText
       }
 
-      throw new Error(errorMessage)
+      const error: ApiError = {
+        message: errorMessage,
+        code: errorCode,
+        status: response.status,
+      }
+
+      // Gestion spécifique des codes d'erreur HTTP
+      switch (response.status) {
+        case 401:
+          error.message = "Non autorisé. Veuillez vous reconnecter."
+          break
+        case 403:
+          error.message = "Accès refusé. Vous n'avez pas les permissions nécessaires."
+          break
+        case 404:
+          error.message = "Ressource non trouvée."
+          break
+        case 409:
+          error.message = "Conflit. Cette ressource existe déjà."
+          break
+        case 422:
+          error.message = "Données invalides. Veuillez vérifier vos informations."
+          break
+        case 500:
+          error.message = "Erreur serveur. Veuillez réessayer plus tard."
+          break
+      }
+
+      throw error
     }
 
     const data = await response.json()
     return data
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof Error && 'message' in error) {
       throw error
     }
     throw new Error("Une erreur inattendue s'est produite")
   }
 }
 
-// Fonctions API génériques pour les produits (exemple)
+// Fonctions API génériques pour les produits
 export const fetchProduits = () => fetchApi<Produit[]>("/products")
 export const fetchProduitById = (id: number) => fetchApi<Produit>(`/products/${id}`)
 
@@ -164,7 +202,7 @@ export async function fetchPaginated<T>(
   return response.json()
 }
 
-// Helper pour obtenir le token depuis localStorage
+// Fonctions utilitaires pour l'authentification
 export const getAuthToken = (): string | null => {
   if (typeof window !== "undefined") {
     return localStorage.getItem("token")
@@ -172,7 +210,6 @@ export const getAuthToken = (): string | null => {
   return null
 }
 
-// Helper pour obtenir l'utilisateur depuis localStorage
 export const getAuthUser = (): User | null => {
   if (typeof window !== "undefined") {
     const userStr = localStorage.getItem("user")
@@ -181,10 +218,60 @@ export const getAuthUser = (): User | null => {
   return null
 }
 
-// Helper pour nettoyer l'authentification
+export const getUserRole = (): 'client' | 'admin' | null => {
+  if (typeof window !== "undefined") {
+    return localStorage.getItem("userRole") as 'client' | 'admin' | null
+  }
+  return null
+}
+
 export const clearAuth = (): void => {
   if (typeof window !== "undefined") {
     localStorage.removeItem("token")
     localStorage.removeItem("user")
+    localStorage.removeItem("userRole")
+  }
+}
+
+// Fonction pour créer des headers d'authentification
+export const createAuthHeaders = (token?: string): Record<string, string> => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  }
+  
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  } else {
+    const storedToken = getAuthToken()
+    if (storedToken) {
+      headers.Authorization = `Bearer ${storedToken}`
+    }
+  }
+  
+  return headers
+}
+
+// Fonction pour vérifier si l'utilisateur est authentifié
+export const isAuthenticated = (): boolean => {
+  return !!getAuthToken()
+}
+
+// Fonction pour vérifier le rôle de l'utilisateur
+export const isAdmin = (): boolean => {
+  return getUserRole() === "admin"
+}
+
+export const isClient = (): boolean => {
+  return getUserRole() === "client"
+}
+
+// Fonction pour gérer les erreurs d'authentification
+export const handleAuthError = (error: ApiError): void => {
+  if (error.status === 401 || error.status === 403) {
+    clearAuth()
+    // Rediriger vers la page de connexion si nécessaire
+    if (typeof window !== "undefined") {
+      window.location.href = "/login"
+    }
   }
 }

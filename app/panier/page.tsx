@@ -5,14 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useRouter } from "next/navigation"
-import { Loader2, CheckCircle, XCircle } from "lucide-react"
+import { Loader2, CheckCircle, XCircle, ShoppingBag, X } from "lucide-react"
 import { useState } from "react"
-import { ShoppingBag } from "lucide-react"
 import { Header } from "@/components/header" // Import Header
 import { Footer } from "@/components/footer" // Import Footer
 
 export default function PaymentPage() {
-  const { cartItems, cartTotal, clearCart } = useCart()
+  const { cartItems, cartTotal, clearCart, removeFromCart } = useCart() // Add removeFromCart
   const router = useRouter()
   const [isProcessing, setIsProcessing] = useState(false)
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "success" | "failed">("idle")
@@ -37,8 +36,6 @@ export default function PaymentPage() {
       <>
         <Header /> {/* Render Header */}
         <main className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          {" "}
-          {/* Add flex-1 and center content */}
           <ShoppingBag className="h-24 w-24 text-muted-foreground mb-6" />
           <h2 className="text-2xl font-bold mb-2">Votre panier est vide</h2>
           <p className="text-muted-foreground mb-6">Ajoutez des articles pour passer une commande.</p>
@@ -54,8 +51,6 @@ export default function PaymentPage() {
       <>
         <Header /> {/* Render Header */}
         <main className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          {" "}
-          {/* Add flex-1 and center content */}
           <CheckCircle className="h-24 w-24 text-green-500 mb-6" />
           <h2 className="text-2xl font-bold mb-2">Commande passée avec succès !</h2>
           <p className="text-muted-foreground mb-6">Merci pour votre achat. Un email de confirmation a été envoyé.</p>
@@ -71,8 +66,6 @@ export default function PaymentPage() {
       <>
         <Header /> {/* Render Header */}
         <main className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          {" "}
-          {/* Add flex-1 and center content */}
           <XCircle className="h-24 w-24 text-red-500 mb-6" />
           <h2 className="text-2xl font-bold mb-2">Échec du paiement</h2>
           <p className="text-muted-foreground mb-6">
@@ -89,8 +82,6 @@ export default function PaymentPage() {
     <>
       <Header /> {/* Render Header */}
       <main className="flex-1 container mx-auto px-4 py-8">
-        {" "}
-        {/* Add flex-1 to main content */}
         <h1 className="text-3xl font-bold mb-8">Récapitulatif de la commande</h1>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
@@ -117,7 +108,18 @@ export default function PaymentPage() {
                         </p>
                       )}
                     </div>
-                    <span className="font-semibold">{(item.price * item.quantity).toLocaleString()} FCFA</span>
+                    <div className="flex flex-col items-end">
+                      <span className="font-semibold">{(item.price * item.quantity).toLocaleString()} FCFA</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 mt-2"
+                        onClick={() => removeFromCart(item.id)} // Add remove button
+                      >
+                        <X className="h-4 w-4 mr-1" />
+                        Supprimer
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </CardContent>

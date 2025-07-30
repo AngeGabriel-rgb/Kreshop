@@ -1,14 +1,14 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Mail, Lock, User, Phone } from "lucide-react"
-import { registerClient } from "@/lib/auth"
+import { registerClient, useAuth } from "@/lib/auth"
 import type { RegisterClientPayload } from "@/lib/auth"
 
 interface ClientRegisterData {
@@ -30,6 +30,8 @@ export default function ClientRegisterForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const router = useRouter()
+  const { setAuthData } = useAuth()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -56,7 +58,10 @@ export default function ClientRegisterForm() {
 
       const response = await registerClient(registerData)
 
-      setSuccess("Inscription réussie ! Vous pouvez maintenant vous connecter.")
+      // Utiliser setAuthData pour stocker les données d'authentification
+      setAuthData(response)
+
+      setSuccess("Inscription réussie ! Redirection vers votre dashboard...")
 
       // Réinitialiser le formulaire
       setFormData({
@@ -67,11 +72,10 @@ export default function ClientRegisterForm() {
         phone: "",
       })
 
-      // Optionnel : connecter automatiquement l'utilisateur
-      if (response.token && response.client) {
-        localStorage.setItem("token", response.token)
-        localStorage.setItem("user", JSON.stringify({ ...response.client, role: "client" }))
-      }
+      // Rediriger vers le dashboard client
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 2000)
     } catch (error) {
       setError(error instanceof Error ? error.message : "Erreur lors de l'inscription")
     } finally {
