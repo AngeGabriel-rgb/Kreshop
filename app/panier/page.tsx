@@ -9,51 +9,49 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
-
-interface CartItem {
-  id: number
-  name: string
-  price: number
-  quantity: number
-  image: string
-  color?: string
-  size?: string
-}
+import {
+  getCartItems,
+  updateCartItemQuantity,
+  removeCartItem,
+  getSubtotal,
+  getShippingCost,
+  getTotal,
+  type CartItem,
+} from "@/lib/cart"
 
 export default function CartPage() {
   const [cartItems, setCartItems] = React.useState<CartItem[]>([])
   const { toast } = useToast()
 
+  const updateCartState = () => {
+    setCartItems(getCartItems())
+  }
+
   React.useEffect(() => {
-    const storedCart = localStorage.getItem("kreshop_cart")
-    if (storedCart) {
-      setCartItems(JSON.parse(storedCart))
+    updateCartState()
+    // Listen for changes in localStorage from other tabs/windows
+    const handleStorageChange = () => {
+      updateCartState()
+    }
+    window.addEventListener("storage", handleStorageChange)
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
     }
   }, [])
 
-  React.useEffect(() => {
-    localStorage.setItem("kreshop_cart", JSON.stringify(cartItems))
-  }, [cartItems])
-
-  const updateQuantity = (id: number, delta: number) => {
-    setCartItems((currentItems) =>
-      currentItems
-        .map((item) => (item.id === id ? { ...item, quantity: item.quantity + delta } : item))
-        .filter((item) => item.quantity > 0),
-    )
+  const handleUpdateQuantity = (id: number, delta: number, color?: string, size?: string) => {
+    updateCartItemQuantity(id, delta, color, size)
+    updateCartState()
   }
 
-  const removeItem = (id: number) => {
-    setCartItems((currentItems) => currentItems.filter((item) => item.id !== id))
-    toast({
-      title: "Produit retiré",
-      description: "Le produit a été retiré de votre panier.",
-    })
+  const handleRemoveItem = (id: number, color?: string, size?: string) => {
+    removeCartItem(id, color, size)
+    updateCartState()
   }
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const shippingCost = cartItems.length > 0 ? 2500 : 0 // Example fixed shipping cost for Libreville
-  const total = subtotal + shippingCost
+  const subtotal = getSubtotal()
+  const shippingCost = getShippingCost()
+  const total = getTotal()
 
   return (
     <div className="container mx-auto py-8">
@@ -73,7 +71,7 @@ export default function CartPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
             {cartItems.map((item) => (
-              <Card key={item.id} className="flex items-center p-4">
+              <Card key={`${item.id}-${item.color || ""}-${item.size || ""}`} className="flex items-center p-4">
                 <Image
                   src={item.image || "/placeholder.svg"}
                   alt={item.name}
@@ -89,6 +87,7 @@ export default function CartPage() {
                         Couleur: {item.color}, Taille: {item.size}
                       </p>
                     )}
+                    {!item.color && !item.size && <p className="text-sm text-muted-foreground">Standard</p>}
                     <p className="text-md font-medium text-primary">
                       {item.price.toLocaleString("fr-GA", { style: "currency", currency: "XAF" })}
                     </p>
@@ -98,7 +97,7 @@ export default function CartPage() {
                       variant="outline"
                       size="icon"
                       className="h-8 w-8 bg-transparent"
-                      onClick={() => updateQuantity(item.id, -1)}
+                      onClick={() => handleUpdateQuantity(item.id, -1, item.color, item.size)}
                     >
                       <MinusCircle className="h-4 w-4" />
                     </Button>
@@ -107,7 +106,7 @@ export default function CartPage() {
                       variant="outline"
                       size="icon"
                       className="h-8 w-8 bg-transparent"
-                      onClick={() => updateQuantity(item.id, 1)}
+                      onClick={() => handleUpdateQuantity(item.id, 1, item.color, item.size)}
                     >
                       <PlusCircle className="h-4 w-4" />
                     </Button>
@@ -115,7 +114,7 @@ export default function CartPage() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => handleRemoveItem(item.id, item.color, item.size)}
                     >
                       <XCircle className="h-4 w-4" />
                       <span className="sr-only">Retirer</span>
@@ -146,7 +145,9 @@ export default function CartPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button className="w-full bg-corail-doux hover:bg-corail-intensifie">Procéder au paiement</Button>
+              <Button asChild className="w-full bg-corail-doux hover:bg-corail-intensifie">
+                <Link href="/checkout">Procéder au paiement</Link>
+              </Button>
             </CardFooter>
           </Card>
         </div>

@@ -11,7 +11,7 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative h-[400px] w-full overflow-hidden rounded-lg md:h-[500px] lg:h-[600px]">
         <Image
-          src="/placeholder.svg?height=800&width=1600&text=Collection Printemps-Été"
+          src="https://www.wsbconceptdemagasin.fr/wp-content/uploads/2018/04/Anna_van_Toor_029-kopi--ren.jpg?height=800&width=1600&text=Collection Printemps-Été"
           alt="Hero Image - New Collection"
           fill
           className="object-cover"

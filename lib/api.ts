@@ -1,10 +1,5 @@
 // lib/api.ts
-import { type ClassValue, clsx } from "clsx"
-import { twMerge } from "tailwind-merge"
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
+// La fonction `cn` a été déplacée vers `lib/utils.ts`
 
 const API_BASE_URL = "https://kreshop.onrender.com" // This will be mocked for frontend-only
 
@@ -56,12 +51,14 @@ export interface Produit {
   description_seo?: string
   date_creation: string
   date_modification: string
-  images: { url: string }[]
+  images: { url: string; alt?: string }[] // Ajout de alt pour les images
   variantes: {
     id: number
     couleur: string
     taille: string
     stock: number
+    prix_supplementaire: number // Ajout de prix_supplementaire
+    images?: { id: number; url: string; est_principale: boolean; ordre_tri: number }[] // Ajout d'images pour les variantes
   }[]
 }
 
@@ -98,6 +95,26 @@ export interface Commande {
   date_modification: string
 }
 
+// Interface pour les métriques du tableau de bord
+export interface DashboardMetrics {
+  totalSales: number
+  pendingOrders: number
+  activeClients: number
+  lowStockProducts: number
+  salesGrowth: number // en pourcentage
+  clientsGrowth: number // en pourcentage
+}
+
+// Interface pour les métriques d'analyse
+export interface AnalyticsMetrics {
+  totalSalesMonth: number
+  processedOrders: number
+  newClients: number
+  conversionRate: number
+  salesGrowthMonth: number
+  clientsGrowthMonth: number
+}
+
 // Types d'erreur améliorés
 export interface ApiError {
   message: string
@@ -108,7 +125,6 @@ export interface ApiError {
 
 // Helper fetch avec gestion d'erreurs améliorée
 export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
-  // Default fetch behavior for other endpoints (will likely fail without a real backend)
   try {
     const response = await fetch(`${API_BASE_URL}${url}`, {
       ...options,
@@ -168,16 +184,78 @@ export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T
 }
 
 // Fonctions API génériques pour les produits
-export const fetchProduits = () => fetchApi<Produit[]>("/products")
-export const fetchProduitById = (id: number) => fetchApi<Produit>(`/products/${id}`)
+// Mise à jour pour gérer la pagination du backend
+export const fetchProduits = async (
+  page = 1,
+  limit = 20,
+): Promise<{ data: Produit[]; total: number; page: number; limit: number }> => {
+  const response = await fetchApi<{
+    success: boolean
+    data: Produit[]
+    meta: { pagination: { page: number; limit: number; total: number; pages: number } }
+  }>(`/products?page=${page}&limit=${limit}`)
+  return {
+    data: response.data,
+    total: response.meta.pagination.total,
+    page: response.meta.pagination.page,
+    limit: response.meta.pagination.limit,
+  }
+}
+export const fetchProduitById = (id: number) =>
+  fetchApi<{ success: boolean; data: Produit }>(`/products/${id}`).then((res) => res.data)
+export const fetchProductBySlug = (slug: string) =>
+  fetchApi<{ success: boolean; data: Produit }>(`/products/slug/${slug}`) // Assurez-vous que votre backend a cet endpoint
+export const createProduit = (data: Partial<Produit>, token: string) =>
+  fetchApi<{ success: boolean; message: string; data: Produit }>("/products", {
+    method: "POST",
+    headers: createAuthHeaders(token),
+    body: JSON.stringify(data),
+  }).then((res) => res.data)
+
+export const updateProduit = (id: number, data: Partial<Produit>, token: string) =>
+  fetchApi<{ success: boolean; message: string; data: Produit }>(`/products/${id}`, {
+    method: "PUT",
+    headers: createAuthHeaders(token),
+    body: JSON.stringify(data),
+  }).then((res) => res.data)
+
+export const deleteProduit = (id: number, token: string) =>
+  fetchApi<{ success: boolean; message: string }>(`/products/${id}`, {
+    method: "DELETE",
+    headers: createAuthHeaders(token),
+  })
 
 // Fonctions API pour les catégories
-export const fetchCategories = () => fetchApi<Categorie[]>("/categories")
-export const fetchCategorieById = (id: number) => fetchApi<Categorie>(`/categories/${id}`)
+export const fetchCategories = (token?: string) =>
+  fetchApi<Categorie[]>("/categories", {
+    headers: createAuthHeaders(token),
+  })
+export const fetchCategorieById = (id: number, token?: string) =>
+  fetchApi<Categorie>(`/categories/${id}`, {
+    headers: createAuthHeaders(token),
+  })
+export const createCategorie = (data: Partial<Categorie>, token: string) =>
+  fetchApi<Categorie>("/categories", {
+    method: "POST",
+    headers: createAuthHeaders(token),
+    body: JSON.stringify(data),
+  })
+export const updateCategorie = (id: number, data: Partial<Categorie>, token: string) =>
+  fetchApi<Categorie>(`/categories/${id}`, {
+    method: "PUT",
+    headers: createAuthHeaders(token),
+    body: JSON.stringify(data),
+  })
+export const deleteCategorie = (id: number, token: string) =>
+  fetchApi<{ message: string }>(`/categories/${id}`, {
+    method: "DELETE",
+    headers: createAuthHeaders(token),
+  })
 
 // Fonctions API pour les commandes
 export const fetchCommandes = (token: string) =>
   fetchApi<Commande[]>("/orders", {
+    // Assurez-vous que l'endpoint est correct pour l'admin
     headers: { Authorization: `Bearer ${token}` },
   })
 export const fetchCommandeById = (id: number, token: string) =>
@@ -193,8 +271,38 @@ export const createCommande = (data: Partial<Commande>, token: string) =>
     },
     body: JSON.stringify(data),
   })
+export const updateCommande = (id: number, data: Partial<Commande>, token: string) =>
+  fetchApi<Commande>(`/orders/${id}`, {
+    method: "PUT",
+    headers: createAuthHeaders(token),
+    body: JSON.stringify(data),
+  })
+export const deleteCommande = (id: number, token: string) =>
+  fetchApi<{ message: string }>(`/orders/${id}`, {
+    method: "DELETE",
+    headers: createAuthHeaders(token),
+  })
 
-// Helper pour la pagination
+// NOUVEAU : Fonction API pour les clients
+export const fetchClients = (token: string) =>
+  fetchApi<Client[]>("/clients", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+
+// Fonctions API pour le Dashboard et l'Analyse
+export const fetchDashboardMetrics = (token: string) =>
+  fetchApi<DashboardMetrics>("/dashboard/metrics", {
+    // Endpoint à définir dans votre backend
+    headers: createAuthHeaders(token),
+  })
+
+export const fetchAnalyticsMetrics = (token: string) =>
+  fetchApi<AnalyticsMetrics>("/analytics/metrics", {
+    // Endpoint à définir dans votre backend
+    headers: createAuthHeaders(token),
+  })
+
+// Helper pour la pagination (peut être réutilisé si nécessaire)
 export async function fetchPaginated<T>(
   url: string,
   page = 1,

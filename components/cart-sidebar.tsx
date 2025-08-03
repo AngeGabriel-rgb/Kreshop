@@ -9,52 +9,60 @@ import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useToast } from "@/components/ui/use-toast"
-
-interface CartItem {
-  id: number
-  name: string
-  price: number
-  quantity: number
-  image: string
-}
+import {
+  getCartItems,
+  updateCartItemQuantity,
+  removeCartItem,
+  getTotalItems,
+  getSubtotal,
+  getShippingCost,
+  getTotal,
+  type CartItem,
+} from "@/lib/cart"
 
 export function CartSidebar() {
   const [cartItems, setCartItems] = React.useState<CartItem[]>([])
+  const [totalItems, setTotalItems] = React.useState(0)
   const { toast } = useToast()
 
+  const updateCartState = () => {
+    setCartItems(getCartItems())
+    setTotalItems(getTotalItems())
+  }
+
   React.useEffect(() => {
-    // Load cart from localStorage on mount
-    const storedCart = localStorage.getItem("kreshop_cart")
-    if (storedCart) {
-      setCartItems(JSON.parse(storedCart))
+    updateCartState()
+    // Listen for changes in localStorage from other tabs/windows
+    const handleStorageChange = () => {
+      updateCartState()
+    }
+    window.addEventListener("storage", handleStorageChange)
+    return () => {
+      window.removeEventListener("storage", handleStorageChange)
     }
   }, [])
 
-  React.useEffect(() => {
-    // Save cart to localStorage whenever it changes
-    localStorage.setItem("kreshop_cart", JSON.stringify(cartItems))
-  }, [cartItems])
-
-  const updateQuantity = (id: number, delta: number) => {
-    setCartItems((currentItems) =>
-      currentItems
-        .map((item) => (item.id === id ? { ...item, quantity: item.quantity + delta } : item))
-        .filter((item) => item.quantity > 0),
-    )
+  const handleUpdateQuantity = (id: number, delta: number, color?: string, size?: string) => {
+    updateCartItemQuantity(id, delta, color, size)
+    updateCartState()
+    toast({
+      title: "Quantité mise à jour",
+      description: "La quantité du produit a été ajustée dans votre panier.",
+    })
   }
 
-  const removeItem = (id: number) => {
-    setCartItems((currentItems) => currentItems.filter((item) => item.id !== id))
+  const handleRemoveItem = (id: number, color?: string, size?: string) => {
+    removeCartItem(id, color, size)
+    updateCartState()
     toast({
       title: "Produit retiré",
       description: "Le produit a été retiré de votre panier.",
     })
   }
 
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const shippingCost = totalItems > 0 ? 2500 : 0 // Example fixed shipping cost for Libreville
-  const total = subtotal + shippingCost
+  const subtotal = getSubtotal()
+  const shippingCost = getShippingCost()
+  const total = getTotal()
 
   return (
     <Sheet>
@@ -69,7 +77,7 @@ export function CartSidebar() {
           <span className="sr-only">Panier</span>
         </Button>
       </SheetTrigger>
-      <SheetContent className="flex flex-col">
+      <SheetContent className="flex flex-col" aria-description="Contenu de votre panier d'achat">
         <SheetHeader>
           <SheetTitle>Votre Panier ({totalItems})</SheetTitle>
         </SheetHeader>
@@ -79,7 +87,7 @@ export function CartSidebar() {
           ) : (
             <div className="space-y-4">
               {cartItems.map((item) => (
-                <div key={item.id} className="flex items-center gap-4">
+                <div key={`${item.id}-${item.color || ""}-${item.size || ""}`} className="flex items-center gap-4">
                   <Image
                     src={item.image || "/placeholder.svg"}
                     alt={item.name}
@@ -90,6 +98,12 @@ export function CartSidebar() {
                   <div className="flex-1">
                     <h4 className="font-medium">{item.name}</h4>
                     <p className="text-sm text-muted-foreground">
+                      {item.color && `Couleur: ${item.color}`}
+                      {item.color && item.size && ", "}
+                      {item.size && `Taille: ${item.size}`}
+                      {!item.color && !item.size && "Standard"}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
                       {item.price.toLocaleString("fr-GA", { style: "currency", currency: "XAF" })}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
@@ -97,7 +111,7 @@ export function CartSidebar() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        onClick={() => updateQuantity(item.id, -1)}
+                        onClick={() => handleUpdateQuantity(item.id, -1, item.color, item.size)}
                       >
                         <MinusCircle className="h-4 w-4" />
                       </Button>
@@ -106,7 +120,7 @@ export function CartSidebar() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
-                        onClick={() => updateQuantity(item.id, 1)}
+                        onClick={() => handleUpdateQuantity(item.id, 1, item.color, item.size)}
                       >
                         <PlusCircle className="h-4 w-4" />
                       </Button>
@@ -114,7 +128,7 @@ export function CartSidebar() {
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6 text-destructive hover:text-destructive"
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => handleRemoveItem(item.id, item.color, item.size)}
                       >
                         <XCircle className="h-4 w-4" />
                         <span className="sr-only">Retirer</span>

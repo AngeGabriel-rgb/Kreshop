@@ -1,49 +1,96 @@
 "use client"
 
-import * as React from "react"
+import type React from "react"
+
+import { useEffect, useState } from "react"
 import Image from "next/image"
-import { useParams } from "next/navigation"
-import { ShoppingCart, Minus, Plus } from "lucide-react"
+import { notFound, useParams } from "next/navigation" // Import useParams
+import { Minus, Plus, ShoppingCart } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Separator } from "@/components/ui/separator"
-import { Skeleton } from "@/components/ui/skeleton"
-import { useToast } from "@/components/ui/use-toast"
-import { fetchProduitById, type Produit } from "@/lib/api"
-import { Input } from "@/components/ui/input"
+import { fetchProductBySlug } from "@/lib/api"
+import { addToCart } from "@/lib/cart" // Import the addToCart function
+
+interface ProductImage {
+  id: number
+  url: string
+  est_principale: boolean
+  ordre_tri: number
+}
+
+interface ProductVariant {
+  id: number
+  couleur?: string
+  taille?: string
+  stock: number
+  prix_supplementaire: number
+  images?: ProductImage[]
+}
+
+interface Product {
+  id: number
+  nom: string
+  slug: string
+  description: string
+  prix_fcfa: number
+  est_actif: boolean
+  categorie: {
+    nom: string
+    slug: string
+  }
+  images: ProductImage[]
+  variantes: ProductVariant[]
+  avis_clients: {
+    id: number
+    note: number
+    commentaire: string
+    date_creation: string
+    client: {
+      prenom: string
+      nom: string
+    }
+  }[]
+}
 
 export default function ProductDetailPage() {
+  // Remove params from props
   const params = useParams()
-  const slug = params.slug as string
-  const { toast } = useToast()
+  const slug = params.slug as string // Get slug using useParams
+  const [product, setProduct] = useState<Product | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [quantity, setQuantity] = useState(1)
+  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined)
+  const [selectedSize, setSelectedSize] = useState<string | undefined>(undefined)
+  const [mainImage, setMainImage] = useState<string | undefined>(undefined)
 
-  const [product, setProduct] = React.useState<Produit | null>(null)
-  const [loading, setLoading] = React.useState(true)
-  const [error, setError] = React.useState<string | null>(null)
-  const [selectedImage, setSelectedImage] = React.useState<string | null>(null)
-  const [selectedColor, setSelectedColor] = React.useState<string>("")
-  const [selectedSize, setSelectedSize] = React.useState<string>("")
-  const [quantity, setQuantity] = React.useState(1)
-
-  React.useEffect(() => {
+  useEffect(() => {
     const getProduct = async () => {
+      if (!slug) return // Ensure slug is available
       try {
         setLoading(true)
-        // In a real app, you'd fetch by slug. For mock, we'll use a dummy ID.
-        // Assuming slug might contain an ID or we can derive one for mock purposes.
-        // For now, let's just use a fixed ID or parse from slug if it's like "product-mock-1"
-        const productId = Number.parseInt(slug.split("-").pop() || "1")
-        const data = await fetchProduitById(productId)
-        setProduct(data)
-        setSelectedImage(data.images[0]?.url || null)
-        if (data.variantes.length > 0) {
-          setSelectedColor(data.variantes[0].couleur)
-          setSelectedSize(data.variantes[0].taille)
+        const response = await fetchProductBySlug(slug)
+        if (response.success && response.data) {
+          setProduct(response.data)
+          // Set initial main image
+          const primaryImage = response.data.images.find((img) => img.est_principale) || response.data.images[0]
+          setMainImage(primaryImage?.url || "/placeholder.svg")
+
+          // Set default selected variant if available
+          if (response.data.variantes && response.data.variantes.length > 0) {
+            const defaultVariant = response.data.variantes[0]
+            setSelectedColor(defaultVariant.couleur)
+            setSelectedSize(defaultVariant.taille)
+          }
+        } else {
+          notFound()
         }
-      } catch (err) {
-        setError("Échec du chargement du produit.")
-        console.error(err)
+      } catch (error) {
+        console.error("Failed to fetch product:", error)
+        notFound()
       } finally {
         setLoading(false)
       }
@@ -51,197 +98,226 @@ export default function ProductDetailPage() {
     getProduct()
   }, [slug])
 
-  const handleAddToCart = () => {
-    if (!product) return
-
-    const currentCart = JSON.parse(localStorage.getItem("kreshop_cart") || "[]")
-    const existingItemIndex = currentCart.findIndex((item: any) => item.id === product.id)
-
-    if (existingItemIndex > -1) {
-      currentCart[existingItemIndex].quantity += quantity
-    } else {
-      currentCart.push({
-        id: product.id,
-        name: product.nom,
-        price: product.prix_fcfa,
-        quantity: quantity,
-        image: product.images[0]?.url || "/placeholder.svg?height=200&width=200&text=Produit",
-        color: selectedColor,
-        size: selectedSize,
-      })
+  useEffect(() => {
+    if (product && product.variantes.length > 0) {
+      const currentVariant = product.variantes.find(
+        (v) =>
+          (selectedColor ? v.couleur === selectedColor : true) && (selectedSize ? v.taille === selectedSize : true),
+      )
+      if (currentVariant && currentVariant.images && currentVariant.images.length > 0) {
+        setMainImage(currentVariant.images[0].url)
+      } else {
+        const primaryImage = product.images.find((img) => img.est_principale) || product.images[0]
+        setMainImage(primaryImage?.url || "/placeholder.svg")
+      }
     }
-    localStorage.setItem("kreshop_cart", JSON.stringify(currentCart))
+  }, [selectedColor, selectedSize, product])
 
-    toast({
-      title: "Produit ajouté au panier",
-      description: `${quantity} x ${product.nom} a été ajouté à votre panier.`,
-    })
+  const handleAddToCart = () => {
+    if (product) {
+      addToCart(product, quantity, selectedColor, selectedSize)
+    }
   }
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-        <div className="space-y-4">
-          <Skeleton className="h-[400px] w-full rounded-lg" />
-          <div className="flex gap-2">
-            <Skeleton className="h-20 w-20 rounded-md" />
-            <Skeleton className="h-20 w-20 rounded-md" />
-            <Skeleton className="h-20 w-20 rounded-md" />
+      <div className="container mx-auto py-8 text-center">
+        <p>Chargement du produit...</p>
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div className="container mx-auto py-8 text-center">
+        <p>Produit non trouvé.</p>
+      </div>
+    )
+  }
+
+  const availableColors = Array.from(new Set(product.variantes.map((v) => v.couleur).filter(Boolean))) as string[]
+  const availableSizes = Array.from(new Set(product.variantes.map((v) => v.taille).filter(Boolean))) as string[]
+
+  const currentPrice =
+    product.prix_fcfa +
+    (product.variantes.find((v) => v.couleur === selectedColor && v.taille === selectedSize)?.prix_supplementaire || 0)
+
+  return (
+    <div className="container mx-auto py-8">
+      <div className="grid gap-8 md:grid-cols-2 lg:gap-12">
+        <div className="flex flex-col items-center">
+          <div className="relative h-[400px] w-full max-w-[400px] overflow-hidden rounded-lg shadow-lg">
+            <Image
+              src={mainImage || "/placeholder.svg"}
+              alt={product.nom}
+              fill
+              style={{ objectFit: "contain" }}
+              className="transition-transform duration-300 hover:scale-105"
+            />
+          </div>
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-2">
+            {product.images.map((img) => (
+              <Button
+                key={img.id}
+                variant="outline"
+                size="icon"
+                className={`h-20 w-20 flex-shrink-0 ${mainImage === img.url ? "ring-2 ring-corail-intensifie" : ""}`}
+                onClick={() => setMainImage(img.url)}
+              >
+                <Image
+                  src={img.url || "/placeholder.svg"}
+                  alt={product.nom}
+                  width={80}
+                  height={80}
+                  className="rounded-md object-cover"
+                />
+              </Button>
+            ))}
+            {product.variantes.map((variant) =>
+              variant.images?.map((img) => (
+                <Button
+                  key={img.id}
+                  variant="outline"
+                  size="icon"
+                  className={`h-20 w-20 flex-shrink-0 ${mainImage === img.url ? "ring-2 ring-corail-intensifie" : ""}`}
+                  onClick={() => setMainImage(img.url)}
+                >
+                  <Image
+                    src={img.url || "/placeholder.svg"}
+                    alt={product.nom}
+                    width={80}
+                    height={80}
+                    className="rounded-md object-cover"
+                  />
+                </Button>
+              )),
+            )}
           </div>
         </div>
         <div className="space-y-6">
-          <Skeleton className="h-10 w-3/4" />
-          <Skeleton className="h-8 w-1/4" />
-          <Skeleton className="h-6 w-1/2" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-12 w-full" />
-        </div>
-      </div>
-    )
-  }
+          <div>
+            <h1 className="text-4xl font-bold font-serif text-brun-chocolat dark:text-beige-creme">{product.nom}</h1>
+            <p className="text-lg text-primary font-semibold mt-2">
+              {currentPrice.toLocaleString("fr-GA", { style: "currency", currency: "XAF" })}
+            </p>
+            <p className="text-muted-foreground mt-2">{product.description}</p>
+          </div>
 
-  if (error || !product) {
-    return (
-      <div className="flex h-96 items-center justify-center text-destructive">
-        <p>{error || "Produit non trouvé."}</p>
-      </div>
-    )
-  }
-
-  const availableColors = Array.from(new Set(product.variantes.map((v) => v.couleur)))
-  const availableSizes = Array.from(new Set(product.variantes.map((v) => v.taille)))
-
-  return (
-    <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-      {/* Product Images */}
-      <div className="flex flex-col gap-4">
-        <div className="relative h-[400px] w-full overflow-hidden rounded-lg border">
-          {selectedImage && (
-            <Image
-              src={selectedImage || "/placeholder.svg"}
-              alt={product.nom}
-              fill
-              className="object-contain"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 500px"
-            />
+          {availableColors.length > 0 && (
+            <div>
+              <Label htmlFor="color" className="text-lg font-semibold">
+                Couleur:
+              </Label>
+              <RadioGroup
+                id="color"
+                value={selectedColor}
+                onValueChange={setSelectedColor}
+                className="mt-2 flex flex-wrap gap-2"
+              >
+                {availableColors.map((color) => (
+                  <div key={color} className="flex items-center space-x-2">
+                    <RadioGroupItem value={color} id={`color-${color}`} />
+                    <Label htmlFor={`color-${color}`}>{color}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
+            </div>
           )}
-        </div>
-        <div className="flex gap-2 overflow-x-auto">
-          {product.images.map((img, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              size="icon"
-              className={`relative h-20 w-20 shrink-0 rounded-md ${selectedImage === img.url ? "border-2 border-primary" : ""}`}
-              onClick={() => setSelectedImage(img.url)}
-            >
-              <Image
-                src={img.url || "/placeholder.svg"}
-                alt={`${product.nom} - Vue ${index + 1}`}
-                fill
-                className="object-cover"
-              />
-              <span className="sr-only">Voir l'image {index + 1}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
 
-      {/* Product Details */}
-      <div className="space-y-6">
-        <h1 className="text-4xl font-bold font-serif text-brun-chocolat dark:text-beige-creme">{product.nom}</h1>
-        <p className="text-3xl font-bold text-primary">
-          {product.prix_fcfa.toLocaleString("fr-GA", { style: "currency", currency: "XAF" })}
-        </p>
-        {product.prix_comparaison_fcfa && (
-          <p className="text-lg text-muted-foreground line-through">
-            {product.prix_comparaison_fcfa.toLocaleString("fr-GA", { style: "currency", currency: "XAF" })}
-          </p>
-        )}
-
-        <p className="text-muted-foreground">{product.description_courte}</p>
-
-        <Separator />
-
-        {/* Variants Selection */}
-        {product.variantes.length > 0 && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {availableSizes.length > 0 && (
             <div>
-              <h3 className="mb-2 text-lg font-semibold">Couleur</h3>
-              <Select value={selectedColor} onValueChange={setSelectedColor}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner une couleur" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableColors.map((color) => (
-                    <SelectItem key={color} value={color}>
-                      {color}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="size" className="text-lg font-semibold">
+                Taille:
+              </Label>
+              <RadioGroup
+                id="size"
+                value={selectedSize}
+                onValueChange={setSelectedSize}
+                className="mt-2 flex flex-wrap gap-2"
+              >
+                {availableSizes.map((size) => (
+                  <div key={size} className="flex items-center space-x-2">
+                    <RadioGroupItem value={size} id={`size-${size}`} />
+                    <Label htmlFor={`size-${size}`}>{size}</Label>
+                  </div>
+                ))}
+              </RadioGroup>
             </div>
-            <div>
-              <h3 className="mb-2 text-lg font-semibold">Taille</h3>
-              <Select value={selectedSize} onValueChange={setSelectedSize}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Sélectionner une taille" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableSizes.map((size) => (
-                    <SelectItem key={size} value={size}>
-                      {size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          )}
+
+          <div className="flex items-center gap-4">
+            <Label htmlFor="quantity" className="text-lg font-semibold">
+              Quantité:
+            </Label>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={() => setQuantity(Math.max(1, quantity - 1))}>
+                <Minus className="h-4 w-4" />
+              </Button>
+              <span className="w-8 text-center text-lg font-medium">{quantity}</span>
+              <Button variant="outline" size="icon" onClick={() => setQuantity(quantity + 1)}>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
           </div>
-        )}
 
-        {/* Quantity and Add to Cart */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}>
-              <Minus className="h-4 w-4" />
-            </Button>
-            <Input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
-              className="w-16 text-center"
-            />
-            <Button variant="outline" size="icon" onClick={() => setQuantity((prev) => prev + 1)}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button className="flex-1 bg-corail-doux hover:bg-corail-intensifie" onClick={handleAddToCart}>
+          <Button className="w-full bg-corail-doux hover:bg-corail-intensifie py-6 text-lg" onClick={handleAddToCart}>
             <ShoppingCart className="mr-2 h-5 w-5" />
             Ajouter au panier
           </Button>
-        </div>
 
-        <Separator />
+          <Separator />
 
-        {/* Full Description */}
-        <div>
-          <h3 className="mb-2 text-xl font-semibold font-serif">Description Détaillée</h3>
-          <p className="text-muted-foreground">{product.description}</p>
-        </div>
-
-        {/* Placeholder for Reviews/Suggestions */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold font-serif">Avis Clients</h3>
-          <p className="text-muted-foreground">Pas encore d'avis. Soyez le premier !</p>
-          <h3 className="text-xl font-semibold font-serif">Produits Similaires</h3>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Placeholder for similar products */}
-            <Skeleton className="h-48 w-full rounded-lg" />
-            <Skeleton className="h-48 w-full rounded-lg" />
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Avis Clients</CardTitle>
+              <CardDescription>Ce que nos clients pensent de ce produit.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {product.avis_clients && product.avis_clients.length > 0 ? (
+                product.avis_clients.map((review) => (
+                  <div key={review.id} className="border-b pb-4 last:border-b-0 last:pb-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold">
+                        {review.client.prenom} {review.client.nom}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        - {new Date(review.date_creation).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 text-yellow-500">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <StarIcon key={i} className={`h-4 w-4 ${i < review.note ? "fill-current" : "text-gray-300"}`} />
+                      ))}
+                    </div>
+                    <p className="mt-2 text-sm">{review.commentaire}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground">Aucun avis pour le moment.</p>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
+  )
+}
+
+function StarIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
   )
 }

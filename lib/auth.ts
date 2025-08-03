@@ -30,7 +30,7 @@ export interface RegisterAdminPayload {
   firstName: string
   lastName: string
   phone?: string
-  adminKey?: string // Clé secrète pour créer le premier admin
+  adminKey?: string 
 }
 
 export interface ProfileResponse {
