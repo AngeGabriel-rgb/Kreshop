@@ -41,7 +41,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           <Link href="/categories/vetements" className="group relative block h-64 overflow-hidden rounded-lg shadow-md">
             <Image
-              src="/placeholder.svg?height=400&width=600&text=Vêtements"
+              src="/images/categories/vetement.jpg?height=400&width=600&text=Vêtements"
               alt="Vêtements"
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -51,11 +51,11 @@ export default function HomePage() {
             </div>
           </Link>
           <Link
-            href="/categories/accessoires"
+            href="/categories/accesoires"
             className="group relative block h-64 overflow-hidden rounded-lg shadow-md"
           >
             <Image
-              src="/placeholder.svg?height=400&width=600&text=Accessoires"
+              src="/images/categories/acces.jpg?height=400&width=600&text=Accessoires"
               alt="Accessoires"
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
@@ -69,7 +69,7 @@ export default function HomePage() {
             className="group relative block h-64 overflow-hidden rounded-lg shadow-md"
           >
             <Image
-              src="/placeholder.svg?height=400&width=600&text=Chaussures"
+              src="/images/categories/chaussure.jpg?height=400&width=600&text=Chaussures"
               alt="Chaussures"
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"

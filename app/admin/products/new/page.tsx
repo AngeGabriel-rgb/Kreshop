@@ -18,9 +18,9 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { ProtectedRoute } from "@/components/protected-route"
-import { fetchCategories, type Categorie } from "@/lib/api" // Assurez-vous que fetchCategories est disponible
-// Importez le composant AdminDashboardSidebar
+import { fetchCategories, createProduit, type Categorie } from "@/lib/api"
 import { AdminDashboardSidebar } from "@/components/admin-dashboard-sidebar"
+import { useAuth } from "@/lib/auth"
 
 // Schéma de validation pour le formulaire d'ajout/modification de produit
 const productFormSchema = z.object({
@@ -33,8 +33,8 @@ const productFormSchema = z.object({
     .min(0, { message: "Le prix de comparaison doit être un nombre positif." })
     .optional(),
   categorie_id: z.coerce.number().min(1, { message: "Veuillez sélectionner une catégorie." }),
-  est_actif: z.boolean(),
-  est_vedette: z.boolean(),
+  est_actif: z.boolean().default(true),
+  est_vedette: z.boolean().default(false),
   images: z
     .array(
       z.object({
@@ -57,6 +57,8 @@ const productFormSchema = z.object({
 export default function AdminNewProductPage() {
   const { toast } = useToast()
   const router = useRouter()
+  const { getToken } = useAuth()
+
   const [categories, setCategories] = React.useState<Categorie[]>([])
   const [loadingCategories, setLoadingCategories] = React.useState(true)
   const [errorCategories, setErrorCategories] = React.useState<string | null>(null)
@@ -69,7 +71,7 @@ export default function AdminNewProductPage() {
       description_courte: "",
       prix_fcfa: 0,
       prix_comparaison_fcfa: undefined,
-      categorie_id: undefined,
+      categorie_id: undefined, // Keep as undefined to show placeholder initially
       est_actif: true,
       est_vedette: false,
       images: [],
@@ -96,34 +98,47 @@ export default function AdminNewProductPage() {
   })
 
   React.useEffect(() => {
-    const getCategories = async () => {
+    const loadCategories = async () => {
+      setLoadingCategories(true)
+      setErrorCategories(null)
       try {
-        setLoadingCategories(true)
-        const data = await fetchCategories()
+        const token = getToken()
+        if (!token) {
+          router.push("/admin/login")
+          return
+        }
+        const data = await fetchCategories(token)
         setCategories(data)
       } catch (err: any) {
+        console.error("Failed to fetch categories:", err)
         setErrorCategories(err.message || "Échec du chargement des catégories.")
         toast({
-          title: "Erreur",
-          description: "Impossible de charger les catégories pour le produit.",
+          title: "Erreur de chargement",
+          description: err.message || "Impossible de charger les catégories.",
           variant: "destructive",
         })
       } finally {
         setLoadingCategories(false)
       }
     }
-    getCategories()
-  }, [toast])
+    loadCategories()
+  }, [toast, getToken, router])
 
   const onSubmit = async (values: z.infer<typeof productFormSchema>) => {
     try {
-      // TODO: Implémenter l'appel API pour créer un produit (POST /api/products)
-      // Pour l'instant, nous allons simuler une réussite
-      console.log("Données du produit à envoyer:", values)
+      const token = getToken()
+      if (!token) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Vous n'êtes pas authentifié. Veuillez vous reconnecter.",
+          variant: "destructive",
+        })
+        router.push("/admin/login")
+        return
+      }
 
-      // Exemple de simulation d'upload d'images (remplacez par votre logique d'upload réelle)
       const processedImages = values.images?.map((img) => ({
-        url: img.url, // En production, ce serait l'URL retournée par votre service d'upload
+        url: img.url,
         alt: img.alt || values.nom,
       }))
 
@@ -132,22 +147,54 @@ export default function AdminNewProductPage() {
         images: processedImages,
       }
 
-      // Simuler l'appel API
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      console.log("Produit créé/modifié avec succès (simulé):", productData)
+      await createProduit(productData, token)
 
       toast({
         title: "Succès",
-        description: "Produit ajouté avec succès.",
+        description: "Produit créé avec succès.",
       })
-      router.push("/admin/products") // Rediriger vers la liste des produits
+      router.push("/admin/products")
     } catch (error: any) {
       toast({
         title: "Erreur",
-        description: error.message || "Une erreur est survenue lors de l'ajout du produit.",
+        description: error.message || "Une erreur est survenue lors de la création du produit.",
         variant: "destructive",
       })
     }
+  }
+
+  if (loadingCategories) {
+    return (
+      <ProtectedRoute allowedRoles={["admin"]}>
+        <div className="flex min-h-[calc(100svh-12rem)]">
+          <AdminDashboardSidebar />
+          <div className="flex-1 container mx-auto py-8 px-4 md:px-6">
+            <h1 className="mb-8 text-4xl font-bold font-serif text-brun-chocolat dark:text-beige-creme">
+              Ajouter un Nouveau Produit
+            </h1>
+            <p>Chargement des catégories...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
+  }
+
+  if (errorCategories) {
+    return (
+      <ProtectedRoute allowedRoles={["admin"]}>
+        <div className="flex min-h-[calc(100svh-12rem)]">
+          <AdminDashboardSidebar />
+          <div className="flex-1 container mx-auto py-8 px-4 md:px-6">
+            <h1 className="mb-8 text-4xl font-bold font-serif text-brun-chocolat dark:text-beige-creme">
+              Ajouter un Nouveau Produit
+            </h1>
+            <div className="flex h-64 items-center justify-center text-destructive">
+              <p>{errorCategories}</p>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    )
   }
 
   return (
@@ -155,7 +202,6 @@ export default function AdminNewProductPage() {
       <div className="flex min-h-[calc(100svh-12rem)]">
         <AdminDashboardSidebar />
         <div className="flex-1 container mx-auto py-8 px-4 md:px-6">
-          {/* Le contenu existant de la page va ici */}
           <h1 className="mb-8 text-4xl font-bold font-serif text-brun-chocolat dark:text-beige-creme">
             Ajouter un Nouveau Produit
           </h1>
@@ -246,8 +292,11 @@ export default function AdminNewProductPage() {
                       <FormItem>
                         <FormLabel>Catégorie</FormLabel>
                         <Select
-                          onValueChange={(value) => field.onChange(Number(value))}
-                          value={field.value?.toString()}
+                          onValueChange={(value) => {
+                            // If the placeholder is selected, set to undefined, otherwise convert to number
+                            field.onChange(value === "placeholder-category" ? undefined : Number(value))
+                          }}
+                          value={field.value?.toString() || "placeholder-category"} // Set value to placeholder if undefined
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -255,16 +304,20 @@ export default function AdminNewProductPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
+                            {/* Placeholder item with a non-empty string value */}
+                            <SelectItem value="placeholder-category" disabled>
+                              Sélectionner une catégorie
+                            </SelectItem>
                             {loadingCategories ? (
-                              <SelectItem value="" disabled>
+                              <SelectItem value="loading" disabled>
                                 Chargement des catégories...
                               </SelectItem>
                             ) : errorCategories ? (
-                              <SelectItem value="" disabled>
+                              <SelectItem value="error" disabled>
                                 {errorCategories}
                               </SelectItem>
                             ) : categories.length === 0 ? (
-                              <SelectItem value="" disabled>
+                              <SelectItem value="no-categories" disabled>
                                 Aucune catégorie disponible
                               </SelectItem>
                             ) : (
@@ -364,7 +417,6 @@ export default function AdminNewProductPage() {
                     <p className="text-muted-foreground mt-2">
                       Glissez-déposez vos images ici ou cliquez pour sélectionner
                     </p>
-                    {/* Placeholder for actual file input */}
                     <Input type="file" multiple className="sr-only" />
                     <Button type="button" variant="outline" className="mt-4 bg-transparent">
                       <ImageIcon className="mr-2 h-4 w-4" />
@@ -438,7 +490,6 @@ export default function AdminNewProductPage() {
                 </CardContent>
               </Card>
 
-              {/* Placeholder for Promotions and SEO */}
               <Card>
                 <CardHeader>
                   <CardTitle>Promotions & SEO</CardTitle>
@@ -458,7 +509,7 @@ export default function AdminNewProductPage() {
                 className="w-full bg-corail-doux hover:bg-corail-intensifie"
                 disabled={form.formState.isSubmitting}
               >
-                {form.formState.isSubmitting ? "Enregistrement en cours..." : "Enregistrer le Produit"}
+                {form.formState.isSubmitting ? "Enregistrement en cours..." : "Créer le Produit"}
               </Button>
             </form>
           </Form>
