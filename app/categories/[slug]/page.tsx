@@ -10,8 +10,9 @@ interface CategoryPageProps {
 }
 
 export default async function CategoryPage({ params }: CategoryPageProps) {
+  const { slug } = params // Déstructuration explicite du slug
   const categories: Categorie[] = await fetchCategories()
-  const category = categories.find((cat) => cat.slug === params.slug)
+  const category = categories.find((cat) => cat.slug === slug) // Utilisation du slug déstructuré
 
   if (!category) {
     notFound()

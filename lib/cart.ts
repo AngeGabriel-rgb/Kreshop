@@ -1,4 +1,4 @@
-import { toast } from "@/components/ui/use-toast"
+"use client"
 
 export interface CartItem {
   id: number
@@ -12,115 +12,75 @@ export interface CartItem {
 
 const CART_STORAGE_KEY = "kreshop_cart"
 
-export function getCartItems(): CartItem[] {
+export const getCartItems = (): CartItem[] => {
   if (typeof window === "undefined") {
     return []
   }
-  const storedCart = localStorage.getItem(CART_STORAGE_KEY)
-  return storedCart ? JSON.parse(storedCart) : []
+  const cartJson = localStorage.getItem(CART_STORAGE_KEY)
+  return cartJson ? JSON.parse(cartJson) : []
 }
 
-export function saveCartItems(items: CartItem[]): void {
+export const saveCartItems = (items: CartItem[]): void => {
   if (typeof window !== "undefined") {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items))
+    // Dispatch a storage event manually to notify other components in the same tab/window
+    window.dispatchEvent(new Event("storage"))
   }
 }
 
-export function addToCart(
-  product: {
-    id: number
-    nom: string
-    prix_fcfa: number
-    images?: { url: string }[]
-    variantes?: { id: number; couleur?: string; taille?: string; images?: { url: string }[] }[]
-  },
-  quantity: number,
-  selectedColor?: string,
-  selectedSize?: string,
-): void {
-  const currentItems = getCartItems()
-
-  // Determine the image for the cart item
-  let imageUrl = product.images?.[0]?.url || "/placeholder.svg"
-  if (selectedColor || selectedSize) {
-    const variant = product.variantes?.find(
-      (v) => (selectedColor ? v.couleur === selectedColor : true) && (selectedSize ? v.taille === selectedSize : true),
-    )
-    if (variant && variant.images && variant.images.length > 0) {
-      imageUrl = variant.images[0].url
-    }
-  }
-
-  const newItem: CartItem = {
-    id: product.id,
-    name: product.nom,
-    price: product.prix_fcfa,
-    quantity: quantity,
-    image: imageUrl,
-    color: selectedColor,
-    size: selectedSize,
-  }
-
-  const existingItemIndex = currentItems.findIndex(
+export const addCartItem = (newItem: CartItem): void => {
+  const currentCart = getCartItems()
+  const existingItemIndex = currentCart.findIndex(
     (item) => item.id === newItem.id && item.color === newItem.color && item.size === newItem.size,
   )
 
   if (existingItemIndex > -1) {
-    const updatedItems = [...currentItems]
-    updatedItems[existingItemIndex].quantity += quantity
-    saveCartItems(updatedItems)
+    currentCart[existingItemIndex].quantity += newItem.quantity
   } else {
-    saveCartItems([...currentItems, newItem])
+    currentCart.push(newItem)
   }
-
-  toast({
-    title: "Produit ajouté au panier",
-    description: `${quantity} x ${product.nom} a été ajouté à votre panier.`,
-  })
+  saveCartItems(currentCart)
 }
 
-export function updateCartItemQuantity(id: number, delta: number, color?: string, size?: string): void {
-  const currentItems = getCartItems()
-  const updatedItems = currentItems
-    .map((item) =>
-      item.id === id && item.color === color && item.size === size
-        ? { ...item, quantity: item.quantity + delta }
-        : item,
-    )
-    .filter((item) => item.quantity > 0)
-  saveCartItems(updatedItems)
+export const updateCartItemQuantity = (id: number, delta: number, color?: string, size?: string): void => {
+  const currentCart = getCartItems()
+  const itemIndex = currentCart.findIndex((item) => item.id === id && item.color === color && item.size === size)
+
+  if (itemIndex > -1) {
+    currentCart[itemIndex].quantity += delta
+    if (currentCart[itemIndex].quantity <= 0) {
+      currentCart.splice(itemIndex, 1) // Remove if quantity is 0 or less
+    }
+    saveCartItems(currentCart)
+  }
 }
 
-export function removeCartItem(id: number, color?: string, size?: string): void {
-  const currentItems = getCartItems()
-  const updatedItems = currentItems.filter((item) => !(item.id === id && item.color === color && item.size === size))
-  saveCartItems(updatedItems)
-  toast({
-    title: "Produit retiré",
-    description: "Le produit a été retiré de votre panier.",
-  })
+export const removeCartItem = (id: number, color?: string, size?: string): void => {
+  const currentCart = getCartItems()
+  const updatedCart = currentCart.filter((item) => !(item.id === id && item.color === color && item.size === size))
+  saveCartItems(updatedCart)
 }
 
-export function clearCart(): void {
-  saveCartItems([])
-  toast({
-    title: "Panier vidé",
-    description: "Tous les produits ont été retirés de votre panier.",
-  })
+export const clearCart = (): void => {
+  if (typeof window !== "undefined") {
+    localStorage.removeItem(CART_STORAGE_KEY)
+    window.dispatchEvent(new Event("storage"))
+  }
 }
 
-export function getTotalItems(): number {
-  return getCartItems().reduce((sum, item) => sum + item.quantity, 0)
-}
-
-export function getSubtotal(): number {
+export const getSubtotal = (): number => {
   return getCartItems().reduce((sum, item) => sum + item.price * item.quantity, 0)
 }
 
-export function getShippingCost(): number {
-  return getCartItems().length > 0 ? 2500 : 0 // Example fixed shipping cost for Libreville
+export const getShippingCost = (): number => {
+  // Exemple de coût de livraison fixe pour Libreville
+  return getCartItems().length > 0 ? 2000 : 0 // 2000 FCFA si le panier n'est pas vide
 }
 
-export function getTotal(): number {
+export const getTotal = (): number => {
   return getSubtotal() + getShippingCost()
+}
+
+export const getCartItemsCount = (): number => {
+  return getCartItems().reduce((total, item) => total + item.quantity, 0)
 }

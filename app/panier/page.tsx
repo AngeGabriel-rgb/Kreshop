@@ -4,7 +4,6 @@ import * as React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { MinusCircle, PlusCircle, XCircle } from "lucide-react"
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -56,7 +55,6 @@ export default function CartPage() {
   return (
     <div className="container mx-auto py-8">
       <h1 className="mb-8 text-4xl font-bold font-serif text-brun-chocolat dark:text-beige-creme">Votre Panier</h1>
-
       {cartItems.length === 0 ? (
         <Card className="p-8 text-center">
           <CardTitle className="mb-4">Votre panier est vide</CardTitle>
@@ -124,7 +122,6 @@ export default function CartPage() {
               </Card>
             ))}
           </div>
-
           <Card className="lg:col-span-1 h-fit">
             <CardHeader>
               <CardTitle>Résumé de la commande</CardTitle>
