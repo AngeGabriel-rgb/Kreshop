@@ -29,7 +29,8 @@ export const productController = {
         search, 
         sort = 'date_creation',
         minPrice,
-        maxPrice 
+        maxPrice,
+        stockStatus 
       } = req.query;
       
       const skip = (page - 1) * limit;
@@ -44,7 +45,8 @@ export const productController = {
           ]
         }),
         ...(minPrice && { prix_fcfa: { gte: parseFloat(minPrice) } }),
-        ...(maxPrice && { prix_fcfa: { lte: parseFloat(maxPrice) } })
+        ...(maxPrice && { prix_fcfa: { lte: parseFloat(maxPrice) } }),
+        ...(stockStatus && { statut_stock: stockStatus })
       };
 
       const [products, total] = await Promise.all([
@@ -53,11 +55,15 @@ export const productController = {
           include: {
             categorie: true,
             images: {
-              where: { est_principale: true },
-              take: 1
+              orderBy: { ordre_tri: 'asc' }
             },
             variantes: {
-              where: { est_active: true }
+              where: { est_active: true },
+              include: {
+                images: {
+                  orderBy: { ordre_tri: 'asc' }
+                }
+              }
             }
           },
           skip: parseInt(skip),
@@ -67,9 +73,26 @@ export const productController = {
         prisma.produit.count({ where })
       ]);
 
+      // Calculer le stock total pour chaque produit
+      const productsWithStock = products.map(product => {
+        const totalStock = product.variantes.reduce((sum, variant) => sum + variant.stock_disponible, 0);
+        const hasLowStock = product.variantes.some(variant => variant.statut_stock === 'STOCK_FAIBLE');
+        const isOutOfStock = product.variantes.every(variant => variant.statut_stock === 'RUPTURE_STOCK');
+        
+        return {
+          ...product,
+          stock_info: {
+            total_disponible: totalStock,
+            has_low_stock: hasLowStock,
+            is_out_of_stock: isOutOfStock,
+            statut_global: isOutOfStock ? 'RUPTURE_STOCK' : hasLowStock ? 'STOCK_FAIBLE' : 'EN_STOCK'
+          }
+        };
+      });
+
       res.json({
         success: true,
-        data: products,
+        data: productsWithStock,
         meta: {
           pagination: {
             page: parseInt(page),
@@ -77,7 +100,7 @@ export const productController = {
             total,
             pages: Math.ceil(total / limit)
           },
-          filters: { category, search, sort }
+          filters: { category, search, sort, stockStatus }
         }
       });
     } catch (error) {
@@ -102,7 +125,9 @@ export const productController = {
           variantes: {
             where: { est_active: true },
             include: {
-              images: true
+              images: {
+                orderBy: { ordre_tri: 'asc' }
+              }
             }
           },
           avis_clients: {
@@ -125,9 +150,24 @@ export const productController = {
         });
       }
 
+      // Calculer les informations de stock
+      const totalStock = product.variantes.reduce((sum, variant) => sum + variant.stock_disponible, 0);
+      const hasLowStock = product.variantes.some(variant => variant.statut_stock === 'STOCK_FAIBLE');
+      const isOutOfStock = product.variantes.every(variant => variant.statut_stock === 'RUPTURE_STOCK');
+      
+      const productWithStock = {
+        ...product,
+        stock_info: {
+          total_disponible: totalStock,
+          has_low_stock: hasLowStock,
+          is_out_of_stock: isOutOfStock,
+          statut_global: isOutOfStock ? 'RUPTURE_STOCK' : hasLowStock ? 'STOCK_FAIBLE' : 'EN_STOCK'
+        }
+      };
+
       res.json({
         success: true,
-        data: product
+        data: productWithStock
       });
     } catch (error) {
       handleError(res, error, 'Erreur lors de la récupération du produit');
@@ -280,7 +320,162 @@ export const productController = {
     } catch (error) {
       handleError(res, error, 'Erreur lors de la récupération des produits inactifs');
     }
+  },
+
+  // ====================================
+  // GESTION DU STOCK
+  // ====================================
+
+  /**
+   * Mettre à jour le stock d'un produit (Admin)
+   */
+  updateProductStock: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { stock_disponible, stock_reserve, seuil_stock_bas } = req.body;
+
+      const product = await prisma.produit.update({
+        where: { id: parseInt(id) },
+        data: {
+          stock_disponible: parseInt(stock_disponible) || 0,
+          stock_reserve: parseInt(stock_reserve) || 0,
+          seuil_stock_bas: parseInt(seuil_stock_bas) || 5,
+          statut_stock: getStockStatus(parseInt(stock_disponible) || 0, parseInt(seuil_stock_bas) || 5),
+          date_modification: new Date()
+        },
+        include: {
+          categorie: true,
+          variantes: true
+        }
+      });
+
+      res.json({
+        success: true,
+        message: 'Stock mis à jour avec succès',
+        data: product
+      });
+    } catch (error) {
+      handleError(res, error, 'Erreur lors de la mise à jour du stock');
+    }
+  },
+
+  /**
+   * Mettre à jour le stock d'une variante (Admin)
+   */
+  updateVariantStock: async (req, res) => {
+    try {
+      const { variantId } = req.params;
+      const { stock_disponible, stock_reserve, seuil_stock_bas } = req.body;
+
+      const variant = await prisma.varianteProduit.update({
+        where: { id: parseInt(variantId) },
+        data: {
+          stock_disponible: parseInt(stock_disponible) || 0,
+          stock_reserve: parseInt(stock_reserve) || 0,
+          seuil_stock_bas: parseInt(seuil_stock_bas) || 5,
+          statut_stock: getStockStatus(parseInt(stock_disponible) || 0, parseInt(seuil_stock_bas) || 5),
+          date_creation: new Date()
+        },
+        include: {
+          produit: true,
+          images: true
+        }
+      });
+
+      // Mettre à jour le stock total du produit
+      await updateProductTotalStock(variant.produit_id);
+
+      res.json({
+        success: true,
+        message: 'Stock de la variante mis à jour avec succès',
+        data: variant
+      });
+    } catch (error) {
+      handleError(res, error, 'Erreur lors de la mise à jour du stock de la variante');
+    }
+  },
+
+  /**
+   * Récupérer les produits en rupture de stock (Admin)
+   */
+  getOutOfStockProducts: async (req, res) => {
+    try {
+      const products = await prisma.produit.findMany({
+        where: {
+          est_actif: true,
+          statut_stock: 'RUPTURE_STOCK'
+        },
+        include: {
+          categorie: true,
+          variantes: {
+            where: { statut_stock: 'RUPTURE_STOCK' }
+          }
+        }
+      });
+
+      res.json({
+        success: true,
+        data: products
+      });
+    } catch (error) {
+      handleError(res, error, 'Erreur lors de la récupération des produits en rupture de stock');
+    }
+  },
+
+  /**
+   * Récupérer les produits en stock faible (Admin)
+   */
+  getLowStockProducts: async (req, res) => {
+    try {
+      const products = await prisma.produit.findMany({
+        where: {
+          est_actif: true,
+          statut_stock: 'STOCK_FAIBLE'
+        },
+        include: {
+          categorie: true,
+          variantes: {
+            where: { statut_stock: 'STOCK_FAIBLE' }
+          }
+        }
+      });
+
+      res.json({
+        success: true,
+        data: products
+      });
+    } catch (error) {
+      handleError(res, error, 'Erreur lors de la récupération des produits en stock faible');
+    }
   }
 };
+
+// Fonctions utilitaires pour la gestion du stock
+function getStockStatus(stockDisponible, seuilStockBas) {
+  if (stockDisponible === 0) return 'RUPTURE_STOCK';
+  if (stockDisponible <= seuilStockBas) return 'STOCK_FAIBLE';
+  return 'EN_STOCK';
+}
+
+async function updateProductTotalStock(produitId) {
+  const variantes = await prisma.varianteProduit.findMany({
+    where: { produit_id: produitId }
+  });
+
+  const totalStock = variantes.reduce((sum, variant) => sum + variant.stock_disponible, 0);
+  const totalReserve = variantes.reduce((sum, variant) => sum + variant.stock_reserve, 0);
+  const hasLowStock = variantes.some(variant => variant.statut_stock === 'STOCK_FAIBLE');
+  const isOutOfStock = variantes.every(variant => variant.statut_stock === 'RUPTURE_STOCK');
+
+  await prisma.produit.update({
+    where: { id: produitId },
+    data: {
+      stock_total: totalStock + totalReserve,
+      stock_disponible: totalStock,
+      stock_reserve: totalReserve,
+      statut_stock: isOutOfStock ? 'RUPTURE_STOCK' : hasLowStock ? 'STOCK_FAIBLE' : 'EN_STOCK'
+    }
+  });
+}
 
 export default productController;

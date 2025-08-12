@@ -79,12 +79,22 @@ model Produit {
   code_barre            String?  @map("barcode")
   categorie_id          Int
   marque                String?
+  image                 String? @map("main_image_url")
   poids                 Decimal? @db.Decimal(8, 3)
   dimensions            Json?    @db.JsonB
   est_actif             Boolean  @default(true) @map("is_active")
   est_vedette           Boolean  @default(false) @map("is_featured")
   titre_seo             String?  @map("seo_title")
   description_seo       String?  @map("seo_description")
+  
+  // Gestion du stock au niveau produit
+  gestion_stock         Boolean  @default(true) @map("stock_management")
+  stock_total           Int      @default(0) @map("total_stock")
+  stock_disponible      Int      @default(0) @map("available_stock")
+  stock_reserve         Int      @default(0) @map("reserved_stock")
+  seuil_stock_bas       Int      @default(5) @map("low_stock_threshold")
+  statut_stock          StatutStock @default(EN_STOCK) @map("stock_status")
+  
   date_creation         DateTime @default(now()) @map("created_at")
   date_modification     DateTime @updatedAt @map("updated_at")
 
@@ -110,8 +120,14 @@ model VarianteProduit {
   prix_comparaison_fcfa Decimal? @map("compare_price_fcfa") @db.Decimal(10, 2)
   taille                String?
   couleur               String?
+  
+  // Gestion du stock améliorée
   quantite_stock        Int      @default(0) @map("stock_quantity")
+  stock_disponible      Int      @default(0) @map("available_stock")
+  stock_reserve         Int      @default(0) @map("reserved_stock")
   seuil_stock_bas       Int      @default(5) @map("low_stock_threshold")
+  statut_stock          StatutStock @default(EN_STOCK) @map("stock_status")
+  
   est_active            Boolean  @default(true) @map("is_active")
   date_creation         DateTime @default(now()) @map("created_at")
 
@@ -318,4 +334,13 @@ enum TypeRemise {
   MONTANT_FIXE    @map("fixed_amount")
 
   @@map("discount_type")
+}
+
+enum StatutStock {
+  EN_STOCK        @map("in_stock")
+  STOCK_FAIBLE    @map("low_stock")
+  RUPTURE_STOCK   @map("out_of_stock")
+  EN_COMMANDE     @map("on_order")
+
+  @@map("stock_status")
 }
