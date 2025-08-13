@@ -1,304 +1,194 @@
-// lib/auth.ts
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
-import { fetchApi, type User, getAuthToken, clearAuth, isAuthenticated, isAdmin, isClient } from "./api" // Import from the new api.ts
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { useRouter } from "next/navigation"
 
-// Types spécifiques à l'authentification
-export interface AuthResponse {
-  user: User
-  token: string
-  role: "client" | "admin"
-  message: string
-  success?: boolean
-  expiresIn?: string
-}
-
-export interface LoginPayload {
+// Types pour l'authentification
+export interface User {
+  id: number
   email: string
-  password: string
-}
-
-export interface RegisterClientPayload {
-  email: string
-  password: string
-  prenom: string // Changed from firstName
-  nom: string // Changed from lastName
-  telephone: string
-}
-
-export interface RegisterAdminPayload {
-  email: string
-  password: string
-  prenom: string // Changed from firstName
-  nom: string // Changed from lastName
+  prenom: string
+  nom: string
   telephone?: string
-  adminKey?: string
+  est_actif?: boolean
+  date_creation: string
+  role?: "client" | "admin"
 }
 
-export interface ProfileResponse extends User {} // ProfileResponse is now directly User
-
-// Fonction de connexion client
-export const loginClient = async (data: LoginPayload): Promise<AuthResponse> => {
-  return fetchApi<AuthResponse>("/auth/login/client", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-}
-
-// Fonction de connexion admin
-export const loginAdmin = async (data: LoginPayload): Promise<AuthResponse> => {
-  return fetchApi<AuthResponse>("/auth/login/admin", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  })
-}
-
-// Fonction d'inscription client
-export const registerClient = async (data: RegisterClientPayload): Promise<AuthResponse> => {
-  console.log("registerClient appelé avec:", data)
-  try {
-    const response = await fetchApi<AuthResponse>("/auth/register/client", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    })
-    console.log("registerClient réponse:", response)
-    return response
-  } catch (error) {
-    console.error("registerClient erreur:", error)
-    throw error
-  }
-}
-
-// Fonction d'inscription admin (peut utiliser une clé secrète ou un token d'admin)
-export const registerAdmin = async (data: RegisterAdminPayload, token?: string): Promise<AuthResponse> => {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  }
-  // Si un token est fourni, l'utiliser pour l'autorisation
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-  return fetchApi<AuthResponse>("/auth/register/admin", {
-    method: "POST",
-    headers,
-    body: JSON.stringify(data),
-  })
-}
-
-// Fonction pour récupérer le profil utilisateur
-export const getProfile = async (token: string): Promise<ProfileResponse> => {
-  return fetchApi<ProfileResponse>("/auth/profile", {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-}
-
-// Fonction pour vérifier si un token est valide
-export const verifyToken = async (token: string): Promise<{ valid: boolean; user?: User }> => {
-  try {
-    const profile = await getProfile(token)
-    return { valid: true, user: profile }
-  } catch (error) {
-    return { valid: false }
-  }
-}
-
-// Fonction pour déconnecter l'utilisateur
-export const logout = async (token?: string): Promise<void> => {
-  // Si votre API a un endpoint de déconnexion
-  if (token) {
-    try {
-      await fetchApi("/auth/logout", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-    } catch (error) {
-      // Ignorer les erreurs de déconnexion côté serveur
-      console.warn("Erreur lors de la déconnexion côté serveur:", error)
-    }
-  }
-  // Nettoyer le localStorage
-  clearAuth()
-}
-
-// Hook personnalisé pour l'authentification
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null
+  token: string | null
   isAuthenticated: boolean
   isAdmin: boolean
   isClient: boolean
-  login: (email: string, password: string, role: "client" | "admin") => Promise<{ success: boolean; message: string }>
-  register: (
-    name: string,
-    email: string,
-    password: string,
-    phone: string,
-    role: "client" | "admin",
-  ) => Promise<{ success: boolean; message: string }>
+  login: (email: string, password: string, role?: "client" | "admin") => Promise<void>
+  register: (userData: RegisterData) => Promise<void>
   logout: () => void
   getToken: () => string | null
-  getUser: () => User | null
+  loading: boolean
 }
 
+export interface RegisterData {
+  email: string
+  password: string
+  prenom: string
+  nom: string
+  telephone?: string
+  role?: "client" | "admin"
+}
+
+// Création du contexte
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+// Hook pour utiliser le contexte d'authentification
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext)
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider")
+  }
+  return context
+}
+
+// Provider d'authentification
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
+  const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
+  // Vérifier l'authentification au chargement
   useEffect(() => {
-    const loadUserFromStorage = async () => {
-      const storedToken = getAuthToken()
-      if (storedToken) {
-        try {
-          const { valid, user: fetchedUser } = await verifyToken(storedToken)
-          if (valid && fetchedUser) {
-            setUser(fetchedUser)
-          } else {
-            clearAuth()
-          }
-        } catch (error) {
-          console.error("Failed to verify token:", error)
-          clearAuth()
-        }
+    const storedToken = localStorage.getItem("token")
+    const storedUser = localStorage.getItem("user")
+
+    if (storedToken && storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser)
+        setToken(storedToken)
+        setUser(parsedUser)
+      } catch (error) {
+        console.error("Error parsing stored user data:", error)
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
       }
-      setLoading(false)
     }
-    loadUserFromStorage()
+    setLoading(false)
   }, [])
 
-  const setAuthData = useCallback((authResponse: AuthResponse): void => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("token", authResponse.token)
-      localStorage.setItem("user", JSON.stringify(authResponse.user))
-      localStorage.setItem("userRole", authResponse.role)
+  // Fonction de connexion
+  const login = async (email: string, password: string, role: "client" | "admin" = "client") => {
+    try {
+      const endpoint = role === "admin" ? "/auth/admin/login" : "/auth/client/login"
+      const response = await fetch(`https://kreshop.onrender.com${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Échec de la connexion")
+      }
+
+      const data = await response.json()
+      const { token: authToken, user: userData } = data
+
+      // Stocker les données d'authentification
+      localStorage.setItem("token", authToken)
+      localStorage.setItem("user", JSON.stringify(userData))
+      localStorage.setItem("userRole", role)
+
+      setToken(authToken)
+      setUser(userData)
+
+      // Redirection selon le rôle
+      if (role === "admin") {
+        router.push("/admin")
+      } else {
+        router.push("/account")
+      }
+    } catch (error) {
+      console.error("Login error:", error)
+      throw error
     }
-  }, [])
+  }
 
-  const login = useCallback(
-    async (email: string, password: string, role: "client" | "admin") => {
-      setLoading(true)
-      try {
-        let authResponse: AuthResponse
-        if (role === "admin") {
-          authResponse = await loginAdmin({ email, password })
-        } else {
-          authResponse = await loginClient({ email, password })
-        }
+  // Fonction d'inscription
+  const register = async (userData: RegisterData) => {
+    try {
+      const role = userData.role || "client"
+      const endpoint = role === "admin" ? "/auth/admin/register" : "/auth/client/register"
 
-        setAuthData(authResponse)
-        setUser(authResponse.user)
-        return { success: true, message: authResponse.message || "Connexion réussie !" }
-      } catch (error: any) {
-        console.error("Login error:", error)
-        clearAuth()
-        return { success: false, message: error.message || "Email ou mot de passe incorrect." }
-      } finally {
-        setLoading(false)
+      const response = await fetch(`https://kreshop.onrender.com${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || "Échec de l'inscription")
       }
-    },
-    [setAuthData],
-  )
 
-  const register = useCallback(
-    async (name: string, email: string, password: string, phone: string, role: "client" | "admin") => {
-      setLoading(true)
-      try {
-        let authResponse: AuthResponse
-        const [prenom, nom] = name.split(" ", 2) // Simple split for name
+      const data = await response.json()
+      const { token: authToken, user: newUser } = data
 
-        // Validation des données avant envoi
-        if (!prenom || !nom || !email || !password || !phone) {
-          return { 
-            success: false, 
-            message: "Tous les champs sont obligatoires." 
-          }
-        }
+      // Stocker les données d'authentification
+      localStorage.setItem("token", authToken)
+      localStorage.setItem("user", JSON.stringify(newUser))
+      localStorage.setItem("userRole", role)
 
-        if (password.length < 6) {
-          return { 
-            success: false, 
-            message: "Le mot de passe doit contenir au moins 6 caractères." 
-          }
-        }
+      setToken(authToken)
+      setUser(newUser)
 
-        console.log("Tentative d'inscription avec les données:", { prenom, nom, email, telephone: phone, role })
-
-        if (role === "admin") {
-          authResponse = await registerAdmin({ prenom, nom: nom || "", email, password, telephone: phone })
-        } else {
-          authResponse = await registerClient({ prenom, nom: nom || "", email, password, telephone: phone })
-        }
-
-        setAuthData(authResponse)
-        setUser(authResponse.user)
-        return { success: true, message: authResponse.message || "Inscription réussie !" }
-      } catch (error: any) {
-        console.error("Register error details:", {
-          message: error.message,
-          status: error.status,
-          code: error.code,
-          details: error.details
-        })
-        
-        // Gestion spécifique des erreurs
-        let errorMessage = "Erreur d'inscription."
-        
-        if (error.status === 500) {
-          errorMessage = "Erreur serveur. Le service d'inscription est temporairement indisponible."
-        } else if (error.status === 409) {
-          errorMessage = "Un compte avec cet email existe déjà."
-        } else if (error.status === 422) {
-          errorMessage = "Données invalides. Vérifiez vos informations."
-        } else if (error.message) {
-          errorMessage = error.message
-        }
-        
-        clearAuth()
-        return { success: false, message: errorMessage }
-      } finally {
-        setLoading(false)
+      // Redirection selon le rôle
+      if (role === "admin") {
+        router.push("/admin")
+      } else {
+        router.push("/account")
       }
-    },
-    [setAuthData],
-  )
+    } catch (error) {
+      console.error("Register error:", error)
+      throw error
+    }
+  }
 
-  const handleLogout = useCallback(async () => {
-    const token = getAuthToken()
-    await logout(token || undefined)
+  // Fonction de déconnexion
+  const logout = () => {
+    localStorage.removeItem("token")
+    localStorage.removeItem("user")
+    localStorage.removeItem("userRole")
+    setToken(null)
     setUser(null)
-  }, [])
+    router.push("/")
+  }
 
-  const currentIsAuthenticated = isAuthenticated()
-  const currentIsAdmin = isAdmin()
-  const currentIsClient = isClient()
+  // Fonction pour obtenir le token
+  const getToken = () => {
+    return token || localStorage.getItem("token")
+  }
 
-  const getToken = useCallback(() => {
-    return getAuthToken()
-  }, [])
+  // Valeurs calculées
+  const isAuthenticated = !!token && !!user
+  const isAdmin = user?.role === "admin"
+  const isClient = user?.role === "client"
 
-  const contextValue = React.useMemo(
-    () => ({
-      user,
-      isAuthenticated: currentIsAuthenticated,
-      isAdmin: currentIsAdmin,
-      isClient: currentIsClient,
-      login,
-      register,
-      logout: handleLogout,
-      getToken,
-      getUser: () => user, // Return current user state
-    }),
-    [user, currentIsAuthenticated, currentIsAdmin, currentIsClient, login, register, handleLogout],
-  )
+  const contextValue: AuthContextType = {
+    user,
+    token,
+    isAuthenticated,
+    isAdmin,
+    isClient,
+    login,
+    register,
+    logout,
+    getToken,
+    loading,
+  }
 
   return (
     <AuthContext.Provider value={contextValue}>
@@ -311,12 +201,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       )}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider")
-  }
-  return context
 }

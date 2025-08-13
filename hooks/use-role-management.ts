@@ -1,10 +1,11 @@
 import { useState, useCallback } from "react"
-import { useUser, useAuth } from "@clerk/nextjs"
+import { useUser } from "@clerk/nextjs"
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Use new Clerk auth hook
 import { useClient } from "@/components/client-provider"
 
 export function useRoleManagement() {
   const { user } = useUser()
-  const { getToken } = useAuth()
+  const { getToken } = useClerkAuth()
   const { showSuccess, showError } = useClient()
   const [isLoading, setIsLoading] = useState(false)
 

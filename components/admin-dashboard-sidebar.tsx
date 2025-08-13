@@ -5,14 +5,15 @@ import { usePathname } from "next/navigation"
 import { Package2, LayoutDashboard, ShoppingBag, Tag, Users, BarChart2, Settings, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { useAuth } from "@/lib/auth" // Use the new auth hook
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Use the new Clerk auth hook
+import { useClerk } from "@clerk/nextjs" // Use Clerk for logout functionality
 
 export function AdminDashboardSidebar() {
   const pathname = usePathname()
-  const { logout } = useAuth() // Use the new logout function
+  const { signOut } = useClerk() // Use Clerk's signOut function
 
   const handleLogout = async () => {
-    await logout()
+    await signOut()
   }
 
   const navItems = [

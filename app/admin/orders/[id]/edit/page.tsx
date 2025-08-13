@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/components/ui/use-toast"
-import { getOrderById, updateCommande } from "@/lib/data" // Use new data fetching and update
-import { useAuth } from "@/lib/auth" // Use new auth hook
+import { getOrderById, modifyOrder } from "@/lib/data"
+import { useAuth } from "@/lib/auth"
 import type { Commande, StatutCommande, StatutPaiement } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -35,14 +35,8 @@ export default function AdminEditOrderPage({ params }: AdminEditOrderPageProps) 
     const fetchOrderData = async () => {
       setLoading(true)
       setError(null)
-      const token = getToken()
-      if (!token) {
-        setError("Authentication token not found. Please log in.")
-        setLoading(false)
-        return
-      }
       try {
-        const fetchedOrder = await getOrderById(orderId, token)
+        const fetchedOrder = await getOrderById(orderId)
         setOrderData(fetchedOrder || null)
       } catch (err: any) {
         setError(err.message || "Failed to fetch order details.")
@@ -52,7 +46,7 @@ export default function AdminEditOrderPage({ params }: AdminEditOrderPageProps) 
       }
     }
     fetchOrderData()
-  }, [orderId, getToken])
+  }, [orderId])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -72,16 +66,6 @@ export default function AdminEditOrderPage({ params }: AdminEditOrderPageProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    const token = getToken()
-    if (!token) {
-      toast({
-        title: "Erreur d'authentification",
-        description: "Vous devez être connecté pour modifier une commande.",
-        variant: "destructive",
-      })
-      setIsLoading(false)
-      return
-    }
 
     if (!orderData) {
       toast({
@@ -94,7 +78,7 @@ export default function AdminEditOrderPage({ params }: AdminEditOrderPageProps) 
     }
 
     try {
-      await updateCommande(orderId, orderData, token)
+      await modifyOrder(orderId, orderData)
       toast({
         title: "Commande mise à jour",
         description: "La commande a été mise à jour avec succès.",

@@ -9,7 +9,16 @@ import {
   fetchAnalyticsMetrics,
   fetchClients,
   fetchProductBySlug,
-  fetchCategorieById, // Added import for fetchCategorieById
+  fetchCategorieById,
+  createProduit,
+  updateProduit,
+  deleteProduit,
+  createCategorie,
+  updateCategorie,
+  deleteCategorie,
+  updateCommande,
+  deleteCommande,
+  getAuthToken,
 } from "./api"
 import type { Produit, Categorie, Commande, User, DashboardMetrics, AnalyticsMetrics } from "./types"
 
@@ -59,17 +68,22 @@ export async function getProductsByCategorySlug(slug: string): Promise<Produit[]
   }
 }
 
-// Featured Products
-export async function getFeaturedProducts(limit: number = 4): Promise<Produit[]> {
-  try {
-    // Fetch all products and filter by est_vedette flag
-    const { data: allProducts } = await fetchProduits(1, 1000) // Fetch a large number to cover all products
-    const featuredProducts = allProducts.filter((product) => product.est_vedette)
-    return featuredProducts.slice(0, limit)
-  } catch (error) {
-    console.error("Error fetching featured products:", error)
-    return []
-  }
+export async function addProduct(productData: Partial<Produit>): Promise<Produit> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Authentication token not found.")
+  return createProduit(productData, token)
+}
+
+export async function modifyProduct(id: number, productData: Partial<Produit>): Promise<Produit> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Authentication token not found.")
+  return updateProduit(id, productData, token)
+}
+
+export async function removeProduct(id: number): Promise<{ success: boolean; message: string }> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Authentication token not found.")
+  return deleteProduit(id, token)
 }
 
 // Categories
@@ -84,7 +98,7 @@ export async function getCategories(): Promise<Categorie[]> {
 
 export async function getCategoryById(id: number): Promise<Categorie | undefined> {
   try {
-    return await fetchCategorieById(id) // Updated to use fetchCategorieById
+    return await fetchCategorieById(id)
   } catch (error) {
     console.error(`Error fetching category by ID ${id}:`, error)
     return undefined
@@ -100,9 +114,29 @@ export async function getCategoryBySlugData(slug: string): Promise<Categorie | u
   }
 }
 
+export async function addCategory(categoryData: Partial<Categorie>): Promise<Categorie> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Authentication token not found.")
+  return createCategorie(categoryData, token)
+}
+
+export async function modifyCategory(id: number, categoryData: Partial<Categorie>): Promise<Categorie> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Authentication token not found.")
+  return updateCategorie(id, categoryData, token)
+}
+
+export async function removeCategory(id: number): Promise<{ message: string }> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Authentication token not found.")
+  return deleteCategorie(id, token)
+}
+
 // Orders
-export async function getOrders(token: string): Promise<Commande[]> {
+export async function getOrders(): Promise<Commande[]> {
   try {
+    const token = getAuthToken()
+    if (!token) throw new Error("Authentication token not found.")
     return await fetchCommandes(token)
   } catch (error) {
     console.error("Error fetching orders:", error)
@@ -110,8 +144,10 @@ export async function getOrders(token: string): Promise<Commande[]> {
   }
 }
 
-export async function getOrderById(id: number, token: string): Promise<Commande | undefined> {
+export async function getOrderById(id: number): Promise<Commande | undefined> {
   try {
+    const token = getAuthToken()
+    if (!token) throw new Error("Authentication token not found.")
     return await fetchCommandeById(id, token)
   } catch (error) {
     console.error(`Error fetching order by ID ${id}:`, error)
@@ -119,9 +155,23 @@ export async function getOrderById(id: number, token: string): Promise<Commande 
   }
 }
 
+export async function modifyOrder(id: number, orderData: Partial<Commande>): Promise<Commande> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Authentication token not found.")
+  return updateCommande(id, orderData, token)
+}
+
+export async function removeOrder(id: number): Promise<{ message: string }> {
+  const token = getAuthToken()
+  if (!token) throw new Error("Authentication token not found.")
+  return deleteCommande(id, token)
+}
+
 // Users (Clients)
-export async function getClients(token: string): Promise<User[]> {
+export async function getClients(): Promise<User[]> {
   try {
+    const token = getAuthToken()
+    if (!token) throw new Error("Authentication token not found.")
     return await fetchClients(token)
   } catch (error) {
     console.error("Error fetching clients:", error)
@@ -130,8 +180,10 @@ export async function getClients(token: string): Promise<User[]> {
 }
 
 // Dashboard Metrics
-export async function getDashboardMetrics(token: string): Promise<DashboardMetrics | undefined> {
+export async function getDashboardMetrics(): Promise<DashboardMetrics | undefined> {
   try {
+    const token = getAuthToken()
+    if (!token) throw new Error("Authentication token not found.")
     return await fetchDashboardMetrics(token)
   } catch (error) {
     console.error("Error fetching dashboard metrics:", error)
@@ -140,8 +192,10 @@ export async function getDashboardMetrics(token: string): Promise<DashboardMetri
 }
 
 // Analytics Metrics
-export async function getAnalyticsMetrics(token: string): Promise<AnalyticsMetrics | undefined> {
+export async function getAnalyticsMetrics(): Promise<AnalyticsMetrics | undefined> {
   try {
+    const token = getAuthToken()
+    if (!token) throw new Error("Authentication token not found.")
     return await fetchAnalyticsMetrics(token)
   } catch (error) {
     console.error("Error fetching analytics metrics:", error)

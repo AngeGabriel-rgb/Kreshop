@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { useUser, useAuth } from "@clerk/nextjs"
+import { useUser } from "@clerk/nextjs"
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Use new Clerk auth hook
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +12,7 @@ import { ProtectedRoute } from "@/components/protected-route"
 
 export default function AssignRolePage() {
   const { user } = useUser()
-  const { getToken } = useAuth()
+  const { getToken } = useClerkAuth()
   const { showSuccess, showError } = useClient()
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)

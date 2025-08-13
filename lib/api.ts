@@ -27,6 +27,28 @@ export type StatutPaiement = "EN_ATTENTE" | "PAYE" | "ECHEC" | "REMBOURSE"
 export type TypeAdresse = "LIVRAISON" | "FACTURATION"
 export type TypeRemise = "POURCENTAGE" | "MONTANT_FIXE"
 
+// Interface pour les variantes de produit (synchronisée avec types.ts)
+export interface VarianteProduit {
+  id?: number
+  couleur?: string
+  taille?: string
+  stock: number
+  prix_supplementaire: number
+  est_active?: boolean
+  images?: {
+    id: number
+    url: string
+    est_principale: boolean
+    ordre_tri: number
+  }[]
+}
+
+// Interface pour les images de produit
+export interface ImageProduit {
+  url: string
+  alt?: string
+}
+
 // Interfaces enrichies (exemple pour un système e-commerce complet)
 export interface Produit {
   id: number
@@ -49,15 +71,9 @@ export interface Produit {
   description_seo?: string
   date_creation: string
   date_modification: string
-  images: { url: string; alt?: string }[] // Ajout de alt pour les images
-  variantes: {
-    id: number
-    couleur: string
-    taille: string
-    stock: number
-    prix_supplementaire: number // Ajout de prix_supplementaire
-    images?: { id: number; url: string; est_principale: boolean; ordre_tri: number }[] // Ajout d'images pour les variantes
-  }[]
+  stockQuantity?: number // Ajout du champ stockQuantity
+  images: ImageProduit[]
+  variantes: VarianteProduit[]
 }
 
 export interface Categorie {
@@ -86,8 +102,18 @@ export interface Commande {
   devise: string
   methode_paiement?: string
   reference_paiement?: string
-  adresse_livraison?: any
-  adresse_facturation?: any
+  adresse_livraison?: {
+    rue?: string
+    ville?: string
+    code_postal?: string
+    pays?: string
+  }
+  adresse_facturation?: {
+    rue?: string
+    ville?: string
+    code_postal?: string
+    pays?: string
+  }
   notes?: string
   date_creation: string
   date_modification: string
@@ -165,7 +191,7 @@ export async function fetchApi<T>(url: string, options?: RequestInit): Promise<T
           error.message = "Données invalides. Veuillez vérifier vos informations."
           break
         case 500:
-          error.message = "Erreur serveur. Le service est temporairement indisponible. Veuillez réessayer plus tard."
+          error.message = "Erreur serveur. Veuillez réessayer plus tard."
           break
       }
       throw error

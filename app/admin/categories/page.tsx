@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PlusCircle, Edit, Trash2 } from "lucide-react"
 import { fetchCategories, deleteCategorie } from "@/lib/api" // Use new API functions
-import { useAuth } from "@/lib/auth" // Use new auth hook
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Use new Clerk auth hook
 import { useToast } from "@/components/ui/use-toast"
 import type { Categorie } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AdminCategoriesPage() {
-  const { getToken } = useAuth()
+  const { getToken } = useClerkAuth()
   const { toast } = useToast()
   const [categories, setCategories] = useState<Categorie[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,7 +38,7 @@ export default function AdminCategoriesPage() {
   }, [])
 
   const handleDelete = async (id: number) => {
-    const token = getToken()
+    const token = await getToken()
     if (!token) {
       toast({
         title: "Erreur d'authentification",

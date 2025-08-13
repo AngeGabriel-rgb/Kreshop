@@ -13,14 +13,14 @@ import { Separator } from "@/components/ui/separator"
 import { useToast } from "@/components/ui/use-toast"
 import { useCartStore } from "@/lib/store"
 import { formatPrice } from "@/lib/utils"
-import { useAuth } from "@/lib/auth" // Use the new auth hook
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Use the new Clerk auth hook
 import { createCommande } from "@/lib/api" // Use the new API function
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { toast } = useToast()
   const { items, getTotalPrice, clearCart } = useCartStore()
-  const { user, getToken } = useAuth() // Get user and token from new auth hook
+  const { user, getToken } = useClerkAuth() // Get user and token from new Clerk auth hook
 
   const [shippingAddress, setShippingAddress] = useState({
     firstName: user?.prenom || "",
@@ -52,7 +52,7 @@ export default function CheckoutPage() {
       return
     }
 
-    if (!user || !getToken()) {
+    if (!user) {
       toast({
         title: "Non authentifié",
         description: "Veuillez vous connecter pour passer commande.",
@@ -83,7 +83,7 @@ export default function CheckoutPage() {
         // items: items.map(item => ({ productId: item.productId, quantity: item.quantity, price: item.price }))
       }
 
-      const token = getToken()
+      const token = await getToken()
       if (!token) {
         throw new Error("Authentication token not found.")
       }

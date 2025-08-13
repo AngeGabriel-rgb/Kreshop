@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft } from "lucide-react"
 import { getOrderById } from "@/lib/data" // Use new data fetching
-import { useAuth } from "@/lib/auth" // Use new auth hook
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Use new Clerk auth hook
 import { formatPrice } from "@/lib/utils"
 import type { Commande } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -17,7 +17,7 @@ interface AdminOrderDetailPageProps {
 
 export default function AdminOrderDetailPage({ params }: AdminOrderDetailPageProps) {
   const orderId = Number.parseInt(params.id)
-  const { getToken } = useAuth()
+  const { getToken } = useClerkAuth()
   const [order, setOrder] = useState<Commande | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,7 +26,7 @@ export default function AdminOrderDetailPage({ params }: AdminOrderDetailPagePro
     const fetchOrderData = async () => {
       setLoading(true)
       setError(null)
-      const token = getToken()
+      const token = await getToken()
       if (!token) {
         setError("Authentication token not found. Please log in.")
         setLoading(false)

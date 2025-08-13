@@ -7,12 +7,12 @@ import { useState, useEffect } from "react"
 import type { DashboardMetrics } from "@/lib/types"
 import { useToast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useAuth } from "@/lib/auth" // Import useAuth to get token
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Import useClerkAuth to get token
 import { formatPrice } from "@/lib/utils"
 
 export default function AdminDashboardPage() {
   const { toast } = useToast()
-  const { getToken } = useAuth() // Get token from auth hook
+  const { getToken } = useClerkAuth() // Get token from Clerk auth hook
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { PlusCircle, Edit, Trash2 } from "lucide-react"
-import { getProducts, deleteProduit } from "@/lib/data" // Use new data fetching and delete
-import { useAuth } from "@/lib/auth" // Use new auth hook
+import { getProducts, removeProduct } from "@/lib/data"
+import { useAuth } from "@/lib/auth"
 import { useToast } from "@/components/ui/use-toast"
-import { formatPrice } from "@/lib/utils"
 import type { Produit } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -39,19 +38,9 @@ export default function AdminProductsPage() {
   }, [])
 
   const handleDelete = async (id: number) => {
-    const token = getToken()
-    if (!token) {
-      toast({
-        title: "Erreur d'authentification",
-        description: "Vous devez être connecté pour supprimer un produit.",
-        variant: "destructive",
-      })
-      return
-    }
-
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce produit ?")) {
       try {
-        await deleteProduit(id, token)
+        await removeProduct(id)
         toast({
           title: "Produit supprimé",
           description: "Le produit a été supprimé avec succès.",
@@ -66,6 +55,14 @@ export default function AdminProductsPage() {
         console.error("Error deleting product:", err)
       }
     }
+  }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "XOF",
+      minimumFractionDigits: 0,
+    }).format(price)
   }
 
   if (loading) {

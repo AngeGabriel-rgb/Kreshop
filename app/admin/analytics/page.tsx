@@ -6,12 +6,12 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { getAnalyticsMetrics } from "@/lib/data" // Use new data function
 import { DollarSign, Package, Users, TrendingUp } from "lucide-react"
-import { useAuth } from "@/lib/auth" // Import useAuth to get token
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Import useClerkAuth to get token
 import { formatPrice } from "@/lib/utils"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function AdminAnalyticsPage() {
-  const { getToken } = useAuth()
+  const { getToken } = useClerkAuth()
   const [metrics, setMetrics] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

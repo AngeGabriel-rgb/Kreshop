@@ -1,4 +1,5 @@
-// lib/types.ts
+// lib/types.ts - Interfaces pour les données de l'API
+
 // Types de base pour l'authentification
 export interface User {
   id: number
@@ -41,20 +42,22 @@ export interface Produit {
   marque?: string
   poids?: number
   dimensions?: any
+  stockQuantity?: number // Added stockQuantity field
   est_actif: boolean
   est_vedette: boolean
   titre_seo?: string
   description_seo?: string
   date_creation: string
   date_modification: string
-  images: { url: string; alt?: string }[] // Ajout de alt pour les images
+  images: { url: string; alt?: string }[]
   variantes: {
-    id: number
-    couleur: string
-    taille: string
+    id?: number
+    couleur?: string
+    taille?: string
     stock: number
-    prix_supplementaire: number // Ajout de prix_supplementaire
-    images?: { id: number; url: string; est_principale: boolean; ordre_tri: number }[] // Ajout d'images pour les variantes
+    prix_supplementaire: number
+    est_active?: boolean // Added est_active field for variants
+    images?: { id: number; url: string; est_principale: boolean; ordre_tri: number }[]
   }[]
 }
 

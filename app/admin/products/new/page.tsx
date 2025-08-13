@@ -29,7 +29,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Plus, Minus, X } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createProduit, fetchCategories } from "@/lib/api" // Use new API functions
-import { useAuth } from "@/lib/auth" // Use new auth hook
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Use new Clerk auth hook
 import type { Categorie } from "@/lib/types"
 
 const productSchema = z.object({
@@ -76,7 +76,7 @@ type ProductFormData = z.infer<typeof productSchema>
 export default function AdminNewProductPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { getToken } = useAuth()
+  const { getToken } = useClerkAuth()
   const [categories, setCategories] = useState<Categorie[]>([])
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
@@ -168,7 +168,7 @@ export default function AdminNewProductPage() {
   const handleSubmit = async (data: ProductFormData) => {
     form.clearErrors()
     setIsLoading(true)
-    const token = getToken()
+    const token = await getToken()
     if (!token) {
       toast({
         title: "Erreur d'authentification",

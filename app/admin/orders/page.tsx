@@ -6,10 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Eye, Edit, Trash2 } from "lucide-react"
-import { getOrders, deleteCommande } from "@/lib/data" // Use new data fetching and delete
-import { useAuth } from "@/lib/auth" // Use new auth hook
+import { getOrders, removeOrder } from "@/lib/data"
+import { useAuth } from "@/lib/auth"
 import { useToast } from "@/components/ui/use-toast"
-import { formatPrice } from "@/lib/utils"
 import type { Commande } from "@/lib/types"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -23,14 +22,8 @@ export default function AdminOrdersPage() {
   const fetchOrdersData = async () => {
     setLoading(true)
     setError(null)
-    const token = getToken()
-    if (!token) {
-      setError("Authentication token not found. Please log in.")
-      setLoading(false)
-      return
-    }
     try {
-      const fetchedOrders = await getOrders(token)
+      const fetchedOrders = await getOrders()
       setOrders(fetchedOrders)
     } catch (err: any) {
       setError(err.message || "Failed to fetch orders.")
@@ -42,22 +35,12 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     fetchOrdersData()
-  }, [getToken])
+  }, [])
 
   const handleDelete = async (id: number) => {
-    const token = getToken()
-    if (!token) {
-      toast({
-        title: "Erreur d'authentification",
-        description: "Vous devez être connecté pour supprimer une commande.",
-        variant: "destructive",
-      })
-      return
-    }
-
     if (window.confirm("Êtes-vous sûr de vouloir supprimer cette commande ?")) {
       try {
-        await deleteCommande(id, token)
+        await removeOrder(id)
         toast({
           title: "Commande supprimée",
           description: "La commande a été supprimée avec succès.",
@@ -72,6 +55,14 @@ export default function AdminOrdersPage() {
         console.error("Error deleting order:", err)
       }
     }
+  }
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "XOF",
+      minimumFractionDigits: 0,
+    }).format(price)
   }
 
   if (loading) {

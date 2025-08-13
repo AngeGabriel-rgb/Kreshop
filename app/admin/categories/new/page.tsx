@@ -12,13 +12,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/components/ui/use-toast"
 import { createCategorie } from "@/lib/api" // Use new API function
-import { useAuth } from "@/lib/auth" // Use new auth hook
+import { useClerkAuth } from "@/hooks/use-clerk-auth" // Use new Clerk auth hook
 import type { Categorie } from "@/lib/types"
 
 export default function AdminNewCategoryPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const { getToken } = useAuth()
+  const { getToken } = useClerkAuth()
 
   const [categoryData, setCategoryData] = useState<Partial<Categorie>>({
     nom: "",
@@ -41,7 +41,7 @@ export default function AdminNewCategoryPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    const token = getToken()
+    const token = await getToken()
     if (!token) {
       toast({
         title: "Erreur d'authentification",

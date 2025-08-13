@@ -50,9 +50,7 @@ NEXT_PUBLIC_API_BASE_URL=https://kreshop.onrender.com
 - `<SignOutButton>` - Bouton de déconnexion
 - `<UserButton>` - Menu utilisateur
 - `<SignedIn>` - Condition d'affichage pour utilisateurs connectés
-- `<SignedOut>` - Condition d'affichage pour utilisateurs non connectés
-
-### Hooks personnalisés
+- `<SignedOut>` - Condition d'affichage pour utilisateurs non connectés### Hooks personnalisés
 - `useClerkAuth()` - Hook qui combine Clerk avec la logique métier
 - `useClient()` - Hook pour accéder au ClientProvider
 - `useForm(formId)` - Hook spécialisé pour la gestion des formulaires
