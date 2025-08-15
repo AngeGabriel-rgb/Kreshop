@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Heart, ShoppingBag } from "lucide-react"
 import { api, type Product } from "@/lib/api-client"
+import { useCartStore } from "@/lib/cart-store"
+import { useAuth } from "@/lib/auth-context"
 import { useToast } from "@/hooks/use-toast"
 
 function formatPrice(price: number) {
@@ -24,6 +26,8 @@ export function FeaturedProducts() {
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { addItem } = useCartStore()
+  const { user } = useAuth()
   const { toast } = useToast()
 
   useEffect(() => {
@@ -48,11 +52,43 @@ export function FeaturedProducts() {
     fetchFeaturedProducts()
   }, [])
 
-  const handleAddToCart = (product: Product) => {
-    toast({
-      title: "Produit ajouté",
-      description: `${product.nom} a été ajouté au panier`,
-    })
+  const handleAddToCart = async (product: Product) => {
+    try {
+      console.log("[v0] Tentative d'ajout au panier:", product.nom)
+
+      const cartItem = {
+        id: product.id,
+        name: product.nom,
+        price: product.prix_promo_fcfa || product.prix_fcfa,
+        originalPrice: product.prix_fcfa,
+        image: product.images?.[0]?.url_image || "/placeholder.svg",
+        category: product.categorie?.nom || "Catégorie",
+        color: "Standard",
+        size: "Unique",
+        maxStock: product.stock_disponible || 0,
+        produit_id: product.id,
+        variante_id: undefined,
+        client_id: user?.id,
+      }
+
+      console.log("[v0] Objet cartItem créé:", cartItem)
+
+      await addItem(cartItem)
+
+      console.log("[v0] Produit ajouté avec succès au store")
+
+      toast({
+        title: "Produit ajouté",
+        description: `${product.nom} a été ajouté au panier`,
+      })
+    } catch (error) {
+      console.error("[v0] Erreur lors de l'ajout au panier:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter le produit au panier",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleAddToWishlist = (product: Product) => {

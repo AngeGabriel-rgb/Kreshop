@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Heart, ShoppingCart, Star } from "lucide-react"
 import { createSlug } from "@/lib/utils"
 
-interface Product {
+// Use the same Product type as returned by your API
+type Product = {
   id: number
   nom: string
   description: string
@@ -19,10 +20,7 @@ interface Product {
   est_active: boolean
   note_moyenne?: number
   nombre_avis?: number
-  categorie: {
-    id: number
-    nom: string
-  }
+  categorie_id: number
 }
 
 interface Category {
@@ -60,8 +58,14 @@ export default function CategoryPage() {
 
         // Récupérer tous les produits et filtrer par catégorie
         const productsResponse = await apiClient.getProducts()
-        const filteredProducts = productsResponse.filter(
-          (product: Product) => product.categorie.id === matchingCategory.id && product.est_active,
+
+        // Vérifier si la réponse a la structure { success, data } ou est un tableau direct
+        const productsData = Array.isArray(productsResponse) 
+          ? productsResponse 
+          : productsResponse?.data || []
+
+        const filteredProducts = productsData.filter(
+          (product: Product) => product.categorie_id === matchingCategory.id && product.est_active
         )
 
         setProducts(filteredProducts)
@@ -157,7 +161,7 @@ export default function CategoryPage() {
                     <img
                       src={
                         product.url_image ||
-                        `/placeholder.svg?height=300&width=300&query=${encodeURIComponent(product.nom)}`
+                        `/placeholder.svg?height=300&width=300&query=${encodeURIComponent(product.nom) || "/placeholder.svg"}`
                       }
                       alt={product.nom}
                       className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"

@@ -373,29 +373,29 @@ class ApiClient {
   }
 
   async getCartItems(): Promise<CartItem[]> {
-    return this.request<CartItem[]>("/panier")
+    return this.request<CartItem[]>("/paniers")
   }
 
   async getCartItem(id: number): Promise<CartItem> {
-    return this.request<CartItem>(`/panier${id}`)
+    return this.request<CartItem>(`/paniers/${id}`)
   }
 
   async addToCart(itemData: CreateCartItemRequest): Promise<CartItem> {
-    return this.request<CartItem>("/panier", {
+    return this.request<CartItem>("/paniers", {
       method: "POST",
       body: JSON.stringify(itemData),
     })
   }
 
   async updateCartItem(id: number, updateData: Partial<CartItem>): Promise<CartItem> {
-    return this.request<CartItem>(`/panier${id}`, {
+    return this.request<CartItem>(`/paniers/${id}`, {
       method: "PUT",
       body: JSON.stringify(updateData),
     })
   }
 
   async removeFromCart(id: number): Promise<{ message: string }> {
-    return this.request<{ message: string }>(`/panier/${id}`, {
+    return this.request<{ message: string }>(`/paniers/${id}`, {
       method: "DELETE",
     })
   }

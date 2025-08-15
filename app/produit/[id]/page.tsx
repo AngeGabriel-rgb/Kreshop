@@ -10,47 +10,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-
-// Mock product data - in real app, this would come from API
-const mockProduct = {
-  id: 1,
-  name: "Robe Élégante Wax Traditionnel",
-  price: 45000,
-  originalPrice: 55000,
-  description:
-    "Une magnifique robe en tissu wax traditionnel gabonais, parfaite pour les occasions spéciales. Confectionnée avec soin par nos artisans locaux, cette pièce unique allie tradition et modernité.",
-  images: [
-    "https://www.dressself.com/cdn/shop/products/RobedeSoiree_a7cbc589-e230-45df-85de-cb327013fdb6.jpg?v=1653555707",
-    "https://jane-fashionmode.com/wp-content/uploads/2025/05/tendance-robe-elegante-feminine.webp",
-  ],
-  category: "Femme",
-  brand: "Boutique Gabon",
-  sku: "BG-ROB-001",
-  variants: {
-    colors: [
-      { name: "Rouge", value: "#DC2626", available: true },
-      { name: "Bleu", value: "#2563EB", available: true },
-      { name: "Vert", value: "#16A34A", available: false },
-    ],
-    sizes: [
-      { name: "S", available: true, stock: 3 },
-      { name: "M", available: true, stock: 5 },
-      { name: "L", available: true, stock: 2 },
-      { name: "XL", available: false, stock: 0 },
-    ],
-  },
-  features: [
-    "Tissu wax 100% coton",
-    "Coupe ajustée",
-    "Fermeture éclair invisible",
-    "Doublure intérieure",
-    "Lavage à la main recommandé",
-  ],
-  inStock: true,
-  rating: 4.8,
-  reviewCount: 24,
-  tags: ["wax", "traditionnel", "élégant", "artisanal"],
-}
+import { api, type Product } from "@/lib/api-client"
+import { notFound } from "next/navigation"
 
 interface ProductPageProps {
   params: {
@@ -58,7 +19,81 @@ interface ProductPageProps {
   }
 }
 
-export default function ProductPage({ params }: ProductPageProps) {
+async function getProduct(id: string): Promise<Product | null> {
+  try {
+    const isNumericId = /^\d+$/.test(id)
+
+    let response
+    if (isNumericId) {
+      response = await api.getProduct(id)
+    } else {
+      response = await api.getProductBySlug(id)
+    }
+
+    if (response.success && response.data) {
+      return response.data
+    }
+    return null
+  } catch (error) {
+    console.error("Erreur lors de la récupération du produit:", error)
+    return null
+  }
+}
+
+function transformProductData(apiProduct: Product) {
+  return {
+    id: apiProduct.id,
+    name: apiProduct.nom,
+    price: apiProduct.prix_fcfa,
+    originalPrice: apiProduct.prix_promo_fcfa || undefined,
+    description: apiProduct.description || "Description non disponible",
+    images: apiProduct.images?.map((img) => img.url_image) || ["/placeholder.svg?height=600&width=500"],
+    category: apiProduct.categorie?.nom || "Non catégorisé",
+    brand: "KRESHOP",
+    sku: `KRE-${apiProduct.id.toString().padStart(3, "0")}`,
+    variants: {
+      colors:
+        apiProduct.variantes
+          ?.filter((v) => v.nom.toLowerCase().includes("couleur"))
+          .map((v) => ({
+            name: v.valeur,
+            value: v.valeur,
+            available: v.statut_stock === "EN_STOCK",
+          })) || [],
+      sizes:
+        apiProduct.variantes
+          ?.filter((v) => v.nom.toLowerCase().includes("taille"))
+          .map((v) => ({
+            name: v.valeur,
+            available: v.statut_stock === "EN_STOCK",
+            stock: v.stock_disponible,
+          })) || [],
+    },
+    features: [
+      "Produit authentique gabonais",
+      "Qualité premium",
+      "Livraison rapide à Libreville",
+      "Garantie satisfaction",
+      "Support client WhatsApp",
+    ],
+    inStock: apiProduct.statut_stock === "EN_STOCK",
+    rating: 4.5, // Valeur par défaut en attendant le système d'avis
+    reviewCount: Math.floor(Math.random() * 50) + 5, // Valeur simulée
+    tags: [apiProduct.categorie?.nom?.toLowerCase() || "produit", "gabonais", "authentique"],
+  }
+}
+
+export default async function ProductPage({ params }: ProductPageProps) {
+  const { id } = await params
+
+  const apiProduct = await getProduct(id)
+
+  if (!apiProduct) {
+    notFound()
+  }
+
+  const product = transformProductData(apiProduct)
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -75,17 +110,19 @@ export default function ProductPage({ params }: ProductPageProps) {
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbLink href={`/${mockProduct.category.toLowerCase()}`}>{mockProduct.category}</BreadcrumbLink>
+                <BreadcrumbLink href={`/categories/${apiProduct.categorie?.slug || "tous"}`}>
+                  {product.category}
+                </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
-                <BreadcrumbPage>{mockProduct.name}</BreadcrumbPage>
+                <BreadcrumbPage>{product.name}</BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
 
-          <ProductDetail product={mockProduct} />
-          <RelatedProducts currentProductId={mockProduct.id} category={mockProduct.category} />
+          <ProductDetail product={product} />
+          <RelatedProducts currentProductId={product.id} category={product.category} />
         </div>
       </main>
       <Footer />

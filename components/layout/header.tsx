@@ -1,6 +1,6 @@
 "use client"
-
-import { useState } from "react"
+ 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Search, ShoppingBag, Menu, User, Heart, MessageCircle, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/lib/auth-context"
+import { useCartStore } from "@/lib/cart-store"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,8 +19,22 @@ import {
 
 export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
-  const [cartCount] = useState(3) // Mock cart count
+  const [cartCount, setCartCount] = useState(0)
+  const [isHydrated, setIsHydrated] = useState(false)
+  const { getTotalItems } = useCartStore()
   const { user, isAuthenticated, logout } = useAuth()
+
+  useEffect(() => {
+    setIsHydrated(true)
+    setCartCount(getTotalItems())
+  }, [getTotalItems])
+
+  useEffect(() => {
+    if (isHydrated) {
+      setCartCount(getTotalItems())
+    }
+  }, [getTotalItems, isHydrated])
+
 
   const navigationItems = [
     { name: "Produits", href: "/produits" },
@@ -32,41 +47,41 @@ export function Header() {
 
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
-          {/* Mobile menu */}
+                        {/* Mobile menu */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button variant="ghost" size="icon" className="md:hidden text-charcoal-black">
                 <Menu className="h-6 w-6" />
                 <span className="sr-only">Ouvrir le menu</span>
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+            <SheetContent side="left" className="w-[300px] sm:w-[400px] bg-cream-white">
               <SheetHeader>
-                <SheetTitle>Menu</SheetTitle>
+                <SheetTitle className="text-charcoal-black">Menu</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col space-y-4 mt-6">
                 {navigationItems.map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="text-lg font-medium hover:text-primary transition-colors"
+                    className="text-lg font-medium text-charcoal-black hover:text-sage-green transition-colors"
                   >
                     {item.name}
                   </Link>
                 ))}
-                <div className="border-t pt-4 mt-6">
+                <div className="border-t border-sage-green/20 pt-4 mt-6">
                   {isAuthenticated ? (
                     <>
                       <Link
                         href="/compte"
-                        className="flex items-center space-x-2 text-lg font-medium hover:text-primary transition-colors"
+                        className="flex items-center space-x-2 text-lg font-medium text-charcoal-black hover:text-sage-green transition-colors"
                       >
                         <User className="h-5 w-5" />
                         <span>Mon Compte</span>
                       </Link>
                       <button
                         onClick={logout}
-                        className="flex items-center space-x-2 text-lg font-medium hover:text-primary transition-colors w-full text-left mt-4"
+                        className="flex items-center space-x-2 text-lg font-medium text-charcoal-black hover:text-sage-green transition-colors w-full text-left mt-4"
                       >
                         <LogOut className="h-5 w-5" />
                         <span>Se déconnecter</span>
@@ -76,14 +91,14 @@ export function Header() {
                     <>
                       <Link
                         href="/connexion"
-                        className="flex items-center space-x-2 text-lg font-medium hover:text-primary transition-colors"
+                        className="flex items-center space-x-2 text-lg font-medium text-charcoal-black hover:text-sage-green transition-colors"
                       >
                         <User className="h-5 w-5" />
                         <span>Se connecter</span>
                       </Link>
                       <Link
                         href="/inscription"
-                        className="flex items-center space-x-2 text-lg font-medium hover:text-primary transition-colors mt-4"
+                        className="flex items-center space-x-2 text-lg font-medium text-charcoal-black hover:text-sage-green transition-colors mt-4"
                       >
                         <User className="h-5 w-5" />
                         <span>Créer un compte</span>
@@ -95,6 +110,7 @@ export function Header() {
             </SheetContent>
           </Sheet>
 
+       
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="bg-primary text-primary-foreground rounded-lg p-2">
@@ -109,11 +125,11 @@ export function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className="relative text-sm font-medium transition-all duration-300 hover:text-primary group overflow-hidden"
+                className="relative text-sm font-medium transition-all duration-300 text-charcoal-black hover:text-sage-green group overflow-hidden px-4 py-2 rounded-lg"
               >
                 <span className="relative z-10">{item.name}</span>
-                <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full"></div>
-                <div className="absolute inset-0 bg-primary/5 scale-x-0 transition-transform duration-300 group-hover:scale-x-100 origin-left"></div>
+                <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-golden-yellow transition-all duration-300 group-hover:w-full"></div>
+                <div className="absolute inset-0 bg-sage-green/10 scale-x-0 transition-transform duration-300 group-hover:scale-x-100 origin-left rounded-lg"></div>
               </Link>
             ))}
           </nav>
@@ -121,15 +137,24 @@ export function Header() {
           {/* Search Bar - Desktop */}
           <div className="hidden md:flex items-center flex-1 max-w-md mx-6">
             <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input type="search" placeholder="Rechercher des produits..." className="pl-10 pr-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-black/60 h-4 w-4" />
+              <Input
+                type="search"
+                placeholder="Rechercher des produits..."
+                className="pl-10 pr-4 border-sage-green/20 focus:border-sage-green bg-white"
+              />
             </div>
           </div>
 
           {/* Right Actions */}
           <div className="flex items-center space-x-2">
             {/* Mobile Search */}
-            <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsSearchOpen(!isSearchOpen)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden text-charcoal-black"
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+            >
               <Search className="h-5 w-5" />
               <span className="sr-only">Rechercher</span>
             </Button>
@@ -143,7 +168,7 @@ export function Header() {
             </Button>
 
             {/* Wishlist */}
-            <Button variant="ghost" size="icon" asChild>
+            <Button variant="ghost" size="icon" asChild className="text-charcoal-black hover:text-sage-green">
               <Link href="/favoris">
                 <Heart className="h-5 w-5" />
                 <span className="sr-only">Favoris</span>
@@ -188,13 +213,13 @@ export function Header() {
                 </Link>
               </Button>
             )}
-
-            {/* Cart */}
-            <Button variant="ghost" size="icon" asChild className="relative">
+            
+                        {/* Cart */}
+            <Button variant="ghost" size="icon" asChild className="relative text-charcoal-black hover:text-sage-green">
               <Link href="/panier">
                 <ShoppingBag className="h-5 w-5" />
-                {cartCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-secondary text-secondary-foreground">
+                {isHydrated && cartCount > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs bg-golden-yellow text-charcoal-black animate-pulse">
                     {cartCount}
                   </Badge>
                 )}
@@ -206,10 +231,15 @@ export function Header() {
 
         {/* Mobile Search Bar */}
         {isSearchOpen && (
-          <div className="md:hidden py-4 border-t">
+          <div className="md:hidden py-4 border-t border-sage-green/20">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input type="search" placeholder="Rechercher des produits..." className="pl-10 pr-4" autoFocus />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-charcoal-black/60 h-4 w-4" />
+              <Input
+                type="search"
+                placeholder="Rechercher des produits..."
+                className="pl-10 pr-4 border-sage-green/20 focus:border-sage-green bg-white"
+                autoFocus
+              />
             </div>
           </div>
         )}
