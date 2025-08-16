@@ -87,10 +87,16 @@ export const useCartStore = create<CartStore>()(
 
           const apiCartItems = await api.getMyCart()
           console.log("[v0] Articles récupérés de l'API:", apiCartItems)
+          console.log("[v0] Nombre d'articles dans le panier API:", apiCartItems.length)
+          console.log(
+            "[v0] IDs des produits dans le panier:",
+            apiCartItems.map((item) => ({ id: item.id, produit_id: item.produit_id, quantite: item.quantite })),
+          )
 
           const cartItems: CartItem[] = await Promise.all(
             apiCartItems.map(async (apiItem) => {
               try {
+                console.log(`[v0] Récupération détails pour produit ID ${apiItem.produit_id}`)
                 const productResponse = await api.getProduct(apiItem.produit_id.toString())
                 console.log(`[v0] Détails produit ${apiItem.produit_id}:`, productResponse)
 
@@ -151,6 +157,7 @@ export const useCartStore = create<CartStore>()(
           set({ isLoading: true })
 
           console.log("[v0] Tentative d'ajout au panier:", newItem)
+          console.log("[v0] Articles actuels dans le store avant ajout:", get().items.length)
 
           // Vérifier si l'utilisateur est connecté
           const userData = localStorage.getItem("user_data")
@@ -178,9 +185,11 @@ export const useCartStore = create<CartStore>()(
 
           const result = await api.addToCart(cartData)
           console.log("[v0] Réponse API addToCart:", result)
+          console.log("[v0] Début de synchronisation après ajout...")
 
           await get().syncWithAPI()
           console.log("[v0] Synchronisation terminée avec succès")
+          console.log("[v0] Articles dans le store après synchronisation:", get().items.length)
         } catch (error) {
           console.error("[v0] Erreur lors de l'ajout au panier:", error)
           console.log("[v0] Utilisation du fallback local")

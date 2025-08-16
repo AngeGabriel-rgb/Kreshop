@@ -8,8 +8,8 @@ const recommendedProducts = [
   {
     id: 7,
     name: "Écharpe Soie Motifs Africains",
-    price: 12000,
-    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEdNB5yuSKgF9s4C3cqRfyrqlO2zu01CdSPA&s",
+    price: 2000,
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRbdAb3kG-Slnfvqwp_jyTMyi1jzzBX09n0EQ&s",
     category: "Accessoires",
     rating: 4.6,
     reviews: 15,
@@ -17,7 +17,7 @@ const recommendedProducts = [
   {
     id: 8,
     name: "Bracelet Cuir Tressé",
-    price: 8000,
+    price: 5000,
     image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT72DZ7yZpK5fV-I8n9xTjdVWS21OTYJy2a7g&s",
     category: "Accessoires",
     rating: 4.4,
@@ -26,8 +26,8 @@ const recommendedProducts = [
   {
     id: 9,
     name: "Ceinture Cuir Véritable",
-    price: 18000,
-    image: "/placeholder.svg?height=300&width=300",
+    price: 5000,
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR4Qvkl92bWgTrSjL7z2k7ckUPNzJZSz1-wig&s",
     category: "Accessoires",
     rating: 4.8,
     reviews: 31,
@@ -35,8 +35,8 @@ const recommendedProducts = [
   {
     id: 10,
     name: "Boucles d'Oreilles Dorées",
-    price: 15000,
-    image: "/placeholder.svg?height=300&width=300",
+    price: 3000,
+    image: "https://www.gigiclozeau.fr/cdn/shop/products/gigi-clozeau_boucles-doreilles-soleil-or-jaune_b4so001j00xxxx_i1_3110a598-4ac3-4cdb-a7d7-84aabc6c6d2e.jpg?v=1740752716",
     category: "Accessoires",
     rating: 4.7,
     reviews: 18,
