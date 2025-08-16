@@ -18,8 +18,8 @@ export async function getGatewayUrl(billId: string) {
   try {
     const { url } = await ebilling.getGatewayPortal(
       billId,
-      "http://localhost:3000/checkout/success",
-      "http://localhost:3000/api/ebilling/callback",
+      "https://kreshop.netlify.app/checkout/success",
+      "https://kreshop.netlify.app/api/ebilling/callback",
     )
 
     return { url }
