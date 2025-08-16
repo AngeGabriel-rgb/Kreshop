@@ -110,6 +110,9 @@ importers:
       date-fns:
         specifier: 4.1.0
         version: 4.1.0
+      ebilling-js:
+        specifier: ^0.1.1
+        version: 0.1.1
       embla-carousel-react:
         specifier: 8.5.1
         version: 8.5.1(react@19.1.1)
@@ -1210,6 +1213,9 @@ packages:
     peerDependencies:
       postcss: ^8.1.0
 
+  base-64@1.0.0:
+    resolution: {integrity: sha512-kwDPIFCGx0NZHog36dj+tHiwP4QMzsZ3AgMViUBKI0+V5n4U0ufTCUMhnQ04diaRI8EX/QcPfql7zlhZ7j4zgg==}
+
   bcryptjs@3.0.2:
     resolution: {integrity: sha512-k38b3XOZKv60C4E2hVsXTolJWfkGRMbILBIe2IBITXciy5bOsTKot5kDrf3ZfufQtQOUN5mXceUEpU1rTl9Uog==}
     hasBin: true
@@ -1328,6 +1334,9 @@ packages:
 
   dom-helpers@5.2.1:
     resolution: {integrity: sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA==}
+
+  ebilling-js@0.1.1:
+    resolution: {integrity: sha512-Dzt0FQOinTARwK0B1lrADj7nM1Ov6NtT9qL5rvSZ9eeiukJ8GudmRHEY/0msxzhh2dhf0AaB8dvFcBXV+x8zDw==}
 
   ecdsa-sig-formatter@1.0.11:
     resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
@@ -2796,6 +2805,8 @@ snapshots:
       postcss: 8.5.6
       postcss-value-parser: 4.2.0
 
+  base-64@1.0.0: {}
+
   bcryptjs@3.0.2: {}
 
   browserslist@4.25.2:
@@ -2909,6 +2920,10 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.28.3
       csstype: 3.1.3
+
+  ebilling-js@0.1.1:
+    dependencies:
+      base-64: 1.0.0
 
   ecdsa-sig-formatter@1.0.11:
     dependencies:

@@ -18,7 +18,7 @@ const recommendedProducts = [
     id: 8,
     name: "Bracelet Cuir Tressé",
     price: 8000,
-    image: "/https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT72DZ7yZpK5fV-I8n9xTjdVWS21OTYJy2a7g&s",
+    image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT72DZ7yZpK5fV-I8n9xTjdVWS21OTYJy2a7g&s",
     category: "Accessoires",
     rating: 4.4,
     reviews: 22,

@@ -166,7 +166,7 @@ export function CartSummary() {
 
       {/* Checkout Button */}
       <Button asChild size="lg" className="w-full btn-primary h-12">
-        <Link href="/commande">
+        <Link href="/checkout">
           <CreditCard className="h-5 w-5 mr-2" />
           Passer la commande
         </Link>

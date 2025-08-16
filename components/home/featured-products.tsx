@@ -36,7 +36,11 @@ export function FeaturedProducts() {
         setIsLoading(true)
         const response = await api.getFeaturedProducts()
 
+        console.log("[v0] Réponse API getFeaturedProducts:", response)
+
         if (response.success && response.data) {
+          console.log("[v0] Produits reçus:", response.data)
+          console.log("[v0] Premier produit détaillé:", response.data[0])
           setProducts(response.data)
         } else {
           setError("Impossible de charger les produits")
@@ -54,7 +58,11 @@ export function FeaturedProducts() {
 
   const handleAddToCart = async (product: Product) => {
     try {
-      console.log("[v0] Tentative d'ajout au panier:", product.nom)
+      console.log("[v0] Produit complet reçu:", product)
+      console.log("[v0] Nom du produit:", product.nom)
+      console.log("[v0] Prix du produit:", product.prix_fcfa)
+      console.log("[v0] Catégorie du produit:", product.categorie)
+      console.log("[v0] Images du produit:", product.images)
 
       const cartItem = {
         id: product.id,
@@ -155,8 +163,10 @@ export function FeaturedProducts() {
           {products.map((product) => {
             const mainImage = product.images?.[0]?.url_image || "/placeholder.svg?height=400&width=300"
             const hasPromo = product.prix_promo_fcfa && product.prix_promo_fcfa < product.prix_fcfa
-            const isOutOfStock = product.stock_info?.is_out_of_stock
-            const isLowStock = product.stock_info?.has_low_stock
+            const isOutOfStock = product.statut_stock === "RUPTURE_STOCK" || product.stock_disponible <= 0
+            const isLowStock =
+              product.statut_stock === "STOCK_FAIBLE" ||
+              (product.stock_disponible > 0 && product.stock_disponible <= product.seuil_stock_bas)
 
             return (
               <Card key={product.id} className="group hover:shadow-lg transition-shadow duration-300">

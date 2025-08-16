@@ -33,6 +33,8 @@ export interface RegisterClientRequest {
 }
 
 export interface Product {
+  categorie_nom: string
+  url_image: string
   id: number
   nom: string
   slug: string

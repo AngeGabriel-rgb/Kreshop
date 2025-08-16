@@ -13,6 +13,8 @@ export interface CartItem {
   category: string
   color: string
   size: string
+  selectedColor: string
+  selectedSize: string
   quantity: number
   maxStock: number
   produit_id: number
@@ -30,6 +32,7 @@ export interface PromoCode {
 
 interface CartStore {
   items: CartItem[]
+  cart: CartItem[]
   promoCode: PromoCode | null
   deliveryZone: string
   deliveryMethod: string
@@ -69,6 +72,9 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
+      get cart() {
+        return get().items
+      },
       promoCode: null,
       deliveryZone: "libreville-centre",
       deliveryMethod: "standard",
@@ -77,25 +83,63 @@ export const useCartStore = create<CartStore>()(
       syncWithAPI: async () => {
         try {
           set({ isLoading: true })
-          const apiCartItems = await api.getMyCart()
+          console.log("[v0] Début de synchronisation avec l'API")
 
-          const cartItems: CartItem[] = apiCartItems.map((apiItem) => ({
-            id: apiItem.id,
-            name: apiItem.produit?.nom || "Produit",
-            price: apiItem.produit?.prix_promo_fcfa || apiItem.produit?.prix_fcfa || 0,
-            originalPrice: apiItem.produit?.prix_fcfa,
-            image: apiItem.produit?.images?.[0]?.url_image || "/placeholder.svg",
-            category: apiItem.produit?.categorie?.nom || "Catégorie",
-            color: apiItem.variante?.valeur || "Standard",
-            size: apiItem.variante?.nom || "Unique",
-            quantity: apiItem.quantite,
-            maxStock: apiItem.produit?.stock_disponible || 0,
-            produit_id: apiItem.produit_id,
-            variante_id: apiItem.variante_id,
-            client_id: apiItem.client_id,
-          }))
+          const apiCartItems = await api.getMyCart()
+          console.log("[v0] Articles récupérés de l'API:", apiCartItems)
+
+          const cartItems: CartItem[] = await Promise.all(
+            apiCartItems.map(async (apiItem) => {
+              try {
+                const productResponse = await api.getProduct(apiItem.produit_id.toString())
+                console.log(`[v0] Détails produit ${apiItem.produit_id}:`, productResponse)
+
+                const productDetails = productResponse.data || productResponse
+
+                return {
+                  id: apiItem.id,
+                  name: productDetails.nom || "Produit",
+                  price: Number.parseInt(
+                    productDetails.prix_promo_fcfa?.toString() || productDetails.prix_fcfa?.toString() || "0",
+                  ),
+                  originalPrice: Number.parseInt(productDetails.prix_fcfa?.toString() || "0"),
+                  image: productDetails.url_image || "/placeholder.svg?height=100&width=100",
+                  category: productDetails.categorie_nom || "Catégorie",
+                  color: apiItem.variante?.valeur || "Standard",
+                  size: apiItem.variante?.nom || "Unique",
+                  selectedColor: apiItem.variante?.valeur || "Standard",
+                  selectedSize: apiItem.variante?.nom || "Unique",
+                  quantity: apiItem.quantite,
+                  maxStock: productDetails.stock_disponible || 0,
+                  produit_id: apiItem.produit_id,
+                  variante_id: apiItem.variante_id,
+                  client_id: apiItem.client_id,
+                }
+              } catch (error) {
+                console.error(`[v0] Erreur lors de la récupération du produit ${apiItem.produit_id}:`, error)
+                // Fallback avec les données de base
+                return {
+                  id: apiItem.id,
+                  name: "Produit indisponible",
+                  price: 0,
+                  image: "/placeholder.svg?height=100&width=100",
+                  category: "Catégorie",
+                  color: "Standard",
+                  size: "Unique",
+                  selectedColor: "Standard",
+                  selectedSize: "Unique",
+                  quantity: apiItem.quantite,
+                  maxStock: 0,
+                  produit_id: apiItem.produit_id,
+                  variante_id: apiItem.variante_id,
+                  client_id: apiItem.client_id,
+                }
+              }
+            }),
+          )
 
           set({ items: cartItems, isLoading: false })
+          console.log("[v0] Synchronisation terminée avec succès, articles enrichis:", cartItems)
         } catch (error) {
           console.error("Erreur lors de la synchronisation du panier:", error)
           set({ isLoading: false })
@@ -106,17 +150,41 @@ export const useCartStore = create<CartStore>()(
         try {
           set({ isLoading: true })
 
+          console.log("[v0] Tentative d'ajout au panier:", newItem)
+
+          // Vérifier si l'utilisateur est connecté
+          const userData = localStorage.getItem("user_data")
+          const authToken = localStorage.getItem("auth_token")
+
+          console.log("[v0] Données utilisateur:", userData ? "présentes" : "absentes")
+          console.log("[v0] Token d'authentification:", authToken ? "présent" : "absent")
+
+          if (!userData) {
+            console.log("[v0] Utilisateur non connecté - utilisation du fallback local")
+            throw new Error("Utilisateur non connecté")
+          }
+
+          const user = JSON.parse(userData)
+          console.log("[v0] ID utilisateur:", user.id)
+
           const cartData: CreateCartItemRequest = {
-            client_id: newItem.client_id || 1, // À récupérer du contexte d'auth
+            client_id: user.id || 1,
             produit_id: newItem.produit_id,
             variante_id: newItem.variante_id,
             quantite: 1,
           }
 
-          await api.addToCart(cartData)
+          console.log("[v0] Données envoyées à l'API:", cartData)
+
+          const result = await api.addToCart(cartData)
+          console.log("[v0] Réponse API addToCart:", result)
+
           await get().syncWithAPI()
+          console.log("[v0] Synchronisation terminée avec succès")
         } catch (error) {
-          console.error("Erreur lors de l'ajout au panier:", error)
+          console.error("[v0] Erreur lors de l'ajout au panier:", error)
+          console.log("[v0] Utilisation du fallback local")
+
           // Fallback vers le comportement local
           set((state) => {
             const existingItemIndex = state.items.findIndex(
@@ -130,11 +198,14 @@ export const useCartStore = create<CartStore>()(
                 ...existingItem,
                 quantity: Math.min(existingItem.quantity + 1, existingItem.maxStock),
               }
+              console.log("[v0] Article existant mis à jour:", updatedItems[existingItemIndex])
               return { items: updatedItems, isLoading: false }
             }
 
+            const newCartItem = { ...newItem, quantity: 1, selectedColor: newItem.color, selectedSize: newItem.size }
+            console.log("[v0] Nouvel article ajouté localement:", newCartItem)
             return {
-              items: [...state.items, { ...newItem, quantity: 1 }],
+              items: [...state.items, newCartItem],
               isLoading: false,
             }
           })
@@ -150,7 +221,9 @@ export const useCartStore = create<CartStore>()(
           console.error("Erreur lors de la suppression:", error)
           // Fallback vers le comportement local
           set((state) => ({
-            items: state.items.filter((item) => !(item.id === id && item.color === color && item.size === size)),
+            items: state.items.filter(
+              (item) => !(item.id === id && item.selectedColor === color && item.selectedSize === size),
+            ),
             isLoading: false,
           }))
         }
@@ -166,7 +239,7 @@ export const useCartStore = create<CartStore>()(
           // Fallback vers le comportement local
           set((state) => ({
             items: state.items.map((item) =>
-              item.id === id && item.color === color && item.size === size
+              item.id === id && item.selectedColor === color && item.selectedSize === size
                 ? { ...item, quantity: Math.max(0, Math.min(quantity, item.maxStock)) }
                 : item,
             ),
