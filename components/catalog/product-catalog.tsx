@@ -15,8 +15,8 @@ const mockProducts = [
   {
     id: 1,
     name: "Robe Élégante Wax Traditionnel",
-    price: 45000,
-    originalPrice: 55000,
+    price: 5000,
+    originalPrice: 7000,
     image: "https://www.dressself.com/cdn/shop/products/RobedeSoiree_a7cbc589-e230-45df-85de-cb327013fdb6.jpg?v=1653555707",
     category: "Femme",
     sizes: ["S", "M", "L", "XL"],
@@ -30,7 +30,7 @@ const mockProducts = [
   {
     id: 2,
     name: "Chemise Homme Coton Bio",
-    price: 25000,
+    price: 3000,
     image: "https://lechemiseur.imgix.net/data/lechemiseur/bandeaux/v4/RB56-lechemiseur-chemise-sur-mesure-business-rayee-100ko-1000x10000.jpg?w=1400&auto=format&fp-x=0.5&fp-y=0.5&fit=crop&crop=focalpoint&",
     category: "Homme",
     sizes: ["M", "L", "XL", "XXL"],
@@ -44,8 +44,8 @@ const mockProducts = [
   {
     id: 3,
     name: "Collier Perles Dorées Artisanal",
-    price: 15000,
-    originalPrice: 20000,
+    price: 3000,
+    originalPrice: 6000,
     image: "https://www.netperles.com/upload/AUG-8512-BUST.jpg",
     category: "Accessoires",
     sizes: ["Unique"],
@@ -59,7 +59,7 @@ const mockProducts = [
   {
     id: 4,
     name: "Ensemble Enfant Coloré Safari",
-    price: 18000,
+    price: 8000,
     image: "https://ayuna.fr/1554-home_default/ensemble-poissonvolant.jpg",
     category: "Enfants",
     sizes: ["2-3 ans", "4-5 ans", "6-7 ans"],
@@ -73,7 +73,7 @@ const mockProducts = [
   {
     id: 5,
     name: "Pantalon Femme Taille Haute",
-    price: 32000,
+    price: 7000,
     image: "https://i.pinimg.com/736x/b0/9c/e6/b09ce68d9ef5c038c95f8d54c098ba95.jpg",
     category: "Femme",
     sizes: ["S", "M", "L"],
@@ -87,7 +87,7 @@ const mockProducts = [
   {
     id: 6,
     name: "Sac à Main Cuir Véritable",
-    price: 65000,
+    price: 5000,
     image: "https://www.paulmarius.fr/media/catalog/product/s/a/sac_bandouliere_cuir_besace_marron_paulmarius_naturel__2__0bbc.jpg",
     category: "Accessoires",
     sizes: ["Unique"],
