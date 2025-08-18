@@ -26,7 +26,7 @@ export function HeroSection() {
             <div className="text-white space-y-6">
               <h1 className="text-4xl font-bold leading-tight md:text-5xl lg:text-6xl">
                 Découvrez l&apos;Excellence chez{" "}
-                <span className="bg-gradient-to-r from-golden-yellow to-orange-400 bg-clip-text text-transparent">
+                <span className="bg-gradient-to-r from-golden-yellow to-orange-400 text-golden-yellow font-bold">
                   KreShop
                 </span>
               </h1>
@@ -44,9 +44,8 @@ export function HeroSection() {
                 >
                   <Link href="/produits">Découvrir la Collection</Link>
                 </Button>
-            
               </div>
-              </div>
+            </div>
 
             {/* Espace pour l'image - côté droit */}
             <div className="hidden lg:block"></div>
